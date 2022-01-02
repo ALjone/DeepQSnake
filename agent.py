@@ -34,14 +34,14 @@ class DQAgent:
             prediction = rn.randint(0, 3)
             return prediction
 
-    def make_memory(self, game: Game, move: int, illegal: bool) -> None:
+    def make_memory(self, game: Game, move: int) -> None:
         memory = Memory()
         memory.state = self._get_features(game.game_map)
         memory.action = move
 
         if self.previous_memory is not None:
             self.previous_memory.next_state = memory.state
-            self.previous_memory.reward = self._get_reward(game, illegal)
+            self.previous_memory.reward = self._get_reward(game)
             self.previous_memory.done = game.dead
 
             self.bank.addMemory(self.previous_memory)
@@ -60,13 +60,11 @@ class DQAgent:
                     features[tile-1, i, j] = 1
         return features
 
-    def _get_reward(self, game: Game, illegal: bool) -> float:
+    def _get_reward(self, game: Game) -> float:
         if game.ate_last_turn:
             return 1.0
         if game.dead:
             return -1.0
-        if illegal:
-            return -1
         if game.distToApple() < game.previousAppleDistance:
             return 0.2
         if game.distToApple() >= game.previousAppleDistance:

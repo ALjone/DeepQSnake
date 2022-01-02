@@ -8,8 +8,8 @@ class Trainer:
         # params
         size: int = 10
         lifespan: int = 25
-        memory_bank_size = 3000
-        self.max_episodes: int = 20000
+        memory_bank_size = 10000
+        self.max_episodes: int = 2000
         self.episodes = 0
         self.game: Game = Game(size, lifespan)
         
@@ -28,12 +28,10 @@ class Trainer:
         while(True):
             if self.graphics is not None: 
                 self.graphics.updateWin(self.game, reward)
-                print("Reward", self.agent.trainer.model(self.agent._get_features(self.game.game_map)).tolist())
 
             move = self.agent.get_move(self.game)
-            illegal = move == self.game.illegal_move
             self.game.do_action(move)
-            reward += self.agent._get_reward(self.game, illegal)
+            reward += self.agent._get_reward(self.game)
 
             if(self.game.dead):
                 self.agent.get_move(self.game)
@@ -42,14 +40,13 @@ class Trainer:
     def play_episode(self):
         while(True):
             move = self.agent.get_move(self.game)
-            illegal = move == self.game.illegal_move
-            self.agent.make_memory(self.game, move, illegal)
+            self.agent.make_memory(self.game, move)
             self.game.do_action(move)
 
             if(self.game.dead):
                 score = self.game.score
                 self.episodes += 1
-                self.agent.make_memory(self.game, 5, illegal)
+                self.agent.make_memory(self.game, 5)
                 self.game.reset(warm_start=self.warm_start)
                 start = time.time()
                 self.agent.train()
