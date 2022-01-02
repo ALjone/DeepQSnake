@@ -1,5 +1,4 @@
 from typing import List
-
 from torch.cuda import memory
 from memory_bank import Memory, MemoryBank
 import torch

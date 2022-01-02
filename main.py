@@ -7,9 +7,9 @@ class Trainer:
     def __init__(self, load_warmstart_model: bool = False, load_model: bool = False) -> None:
         # params
         size: int = 10
-        lifespan: int = 25
+        lifespan: int = 50
         memory_bank_size = 10000
-        self.max_episodes: int = 2000
+        self.max_episodes: int = 20000
         self.episodes = 0
         self.game: Game = Game(size, lifespan)
         
@@ -21,7 +21,7 @@ class Trainer:
             
         if load_model: 
             self.agent.trainer.model = torch.load("previous_model")
-        self.warm_start = 1
+        self.warm_start = 0
         
     def run(self):
         reward = 0
@@ -74,12 +74,12 @@ class Trainer:
             if self.episodes > self.max_episodes/4 and not fourth:
                 print("One fourth is done. Increasing the warm start range of the snake, this will make it harder.")
                 fourth = True
-                self.warm_start = 2
+                self.warm_start = 0
             
             if self.episodes > self.max_episodes/2 and not half:
                 print("Half is done. Increasing the warm start range of the snake, this will make it harder.")
                 half = True
-                self.warm_start = 3
+                self.warm_start = 0
             
             if self.episodes > (3*self.max_episodes)/4 and not threefourths:
                 print("Three fourths are done. Increasing the warm start range of the snake, this will make it harder.")
@@ -100,5 +100,5 @@ class Trainer:
         torch.save(self.agent.trainer.model, 'model_'+ datetime.now().strftime("%m_%d_%Y%H_%M_%S"))
         torch.save(self.agent.trainer.model, 'previous_model')
 
-trainer = Trainer(load_model = False)
+trainer = Trainer(load_model = False, load_warmstart_model = True)
 trainer.main()

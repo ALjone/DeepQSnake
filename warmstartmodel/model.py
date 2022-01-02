@@ -21,15 +21,4 @@ class SnakeBrain(torch.nn.Module):
         x = torch.flatten(x, 1)
 
         x = self.fc1(x)
-        return x  
-
-    def load_model(self, state_dict):
-        with torch.no_grad():
-            self.conv1.weight.copy_(state_dict['conv1.weight'])
-            self.conv1.bias.copy_(state_dict['conv1.bias'])
-            self.conv2.weight.copy_(state_dict['conv2.weight'])
-            self.conv2.bias.copy_(state_dict['conv2.bias'])
-            self.conv3.weight.copy_(state_dict['conv3.weight'])
-            self.conv3.bias.copy_(state_dict['conv3.bias'])
-            self.fc1.weight.copy_(state_dict['fc1.weight'])
-            self.fc1.bias.copy_(state_dict['fc1.bias'])
+        return x
