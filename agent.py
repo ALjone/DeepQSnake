@@ -18,12 +18,12 @@ class DQAgent:
         else:
             self.trainer: DQTrainer = DQTrainer()
 
-
-        self.epsilon = 1/(max_episodes*1.1)
+        #TODO should this be over 1?
+        self.epsilon = 1/(max_episodes*1)
         self.previous_memory = None
 
     def _exploration_rate(self):
-        return (1-(self.epsilon*self.episodes))
+        return max((1-(self.epsilon*self.episodes)), 0.1)
 
     def get_move(self, game: Game):
         if self.testing:

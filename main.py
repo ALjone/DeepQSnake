@@ -2,7 +2,7 @@ from agent import DQAgent
 import torch
 from game_map import Game
 from datetime import datetime
-import time
+
 class Trainer:
     def __init__(self, load_warmstart_model: bool = False, load_model: bool = False) -> None:
         # params
@@ -48,20 +48,14 @@ class Trainer:
                 self.episodes += 1
                 self.agent.make_memory(self.game, 5)
                 self.game.reset(warm_start=self.warm_start)
-                start = time.time()
                 self.agent.train()
-                stop = time.time()
 
                 return score
 
     def main(self):
-        avgscore = 0
-        fourth = False
-        half = False
-        threefourths = False
-
         print(f"GPU available: {torch.cuda.is_available()}")
 
+        avgscore = 0
         while (self.episodes < self.max_episodes):
             avgscore += self.play_episode()
 
@@ -69,23 +63,6 @@ class Trainer:
             if self.episodes%100 == 0 and self.episodes != 0:
                 print("Over the last 100 games I've got an average score of", avgscore/100, "Played in total", self.episodes, "games")
                 avgscore = 0
-            
-            
-            if self.episodes > self.max_episodes/4 and not fourth:
-                print("One fourth is done. Increasing the warm start range of the snake, this will make it harder.")
-                fourth = True
-                self.warm_start = 0
-            
-            if self.episodes > self.max_episodes/2 and not half:
-                print("Half is done. Increasing the warm start range of the snake, this will make it harder.")
-                half = True
-                self.warm_start = 0
-            
-            if self.episodes > (3*self.max_episodes)/4 and not threefourths:
-                print("Three fourths are done. Increasing the warm start range of the snake, this will make it harder.")
-                self.warm_start = 0
-                threefourths = True
-
 
         input("Ready? ")
         self.agent.testing = True
@@ -100,5 +77,5 @@ class Trainer:
         torch.save(self.agent.trainer.model, 'model_'+ datetime.now().strftime("%m_%d_%Y%H_%M_%S"))
         torch.save(self.agent.trainer.model, 'previous_model')
 
-trainer = Trainer(load_model = False, load_warmstart_model = True)
+trainer = Trainer(load_model = True, load_warmstart_model = True)
 trainer.main()

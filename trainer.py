@@ -33,10 +33,6 @@ class DQTrainer:
         if self.episodes % self.prime_update_rate == 0:
             self.future_model.load_state_dict(self.model.state_dict())
 
-        # for _ in range(steps):
-        #     loss_ = self._train_step(bank.getSamples(1)[0])
-        #     losses.append(loss_)
-
         samples = bank.getSamples(steps)
         loss_ = self._train_step(samples)
         losses.append(loss_)
