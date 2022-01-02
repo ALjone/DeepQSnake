@@ -5,10 +5,9 @@ class SnakeBrain(torch.nn.Module):
         super(SnakeBrain, self).__init__()
         self.conv1 = torch.nn.Conv2d(3, 16, 3)
         self.conv2 = torch.nn.Conv2d(16, 16, 3)
-        self.conv3 = torch.nn.Conv2d(16, 8, 3)
-        self.fc1 = torch.nn.Linear(128, 64)
-        self.fc2 = torch.nn.Linear(64, 32)
-        self.fc3 = torch.nn.Linear(32, output)
+        self.conv3 = torch.nn.Conv2d(16, 16, 3)
+        self.fc1 = torch.nn.Linear(256, output)
+
         self.relu = torch.nn.ReLU()
         
         
@@ -21,10 +20,7 @@ class SnakeBrain(torch.nn.Module):
         x = self.relu(self.conv3(x))
         x = torch.flatten(x, 1)
 
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        x = self.fc3(x)
-
+        x = self.fc1(x)
         return x  
 
     def load_model(self, state_dict):

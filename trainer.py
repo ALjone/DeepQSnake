@@ -1,84 +1,80 @@
 from typing import List
 
-from torch.cuda import device_count
+from torch.cuda import memory
 from memory_bank import Memory, MemoryBank
 import torch
-from copy import deepcopy
 from model import SnakeBrain
-import numpy as np
+
 
 class DQTrainer:
-    def __init__(self, model: SnakeBrain = None) -> None:
-        self.model: SnakeBrain = SnakeBrain(4)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def __init__(self, model: SnakeBrain = SnakeBrain(4)) -> None:
+        self.model: SnakeBrain = model
+        #Try high
+        self.gamma: float = 0.95
+        self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=0.001)
 
-        self.gamma: float = 0.7
-        self.train_steps: int = 0
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.future_model: SnakeBrain = SnakeBrain(4)
+        self.future_model.load_state_dict(self.model.state_dict())
+
+        self.model.to(self.device)
+        self.future_model.to(self.device)
+
         self.loss: torch.nn.MSELoss = torch.nn.MSELoss()
-        self.prime_update_rate: int = 200
 
-        if model is not None:
-            self.model.load_model(model.state_dict())
+        self.prime_update_rate: int = 10
+        self.episodes: int = 0
 
-        self.optim: torch.optim.Adam = torch.optim.Adadelta(self.model.parameters(), lr=0.001)
-        self.future_model: SnakeBrain = deepcopy(self.model)
 
-        self.model.to(device)
-        self.future_model.to(device)
-
-    def train(self, bank: MemoryBank, steps = None, print_ = False):
-        #TODO Figure out these values
-        steps = 50
-        samples = 400
+    def train(self, bank: MemoryBank, steps = 512, print_ = False) -> None:
         self.model.train()
         losses = []
-        for _ in range(steps):
-            self.train_steps += 1
-            if self.train_steps % self.prime_update_rate == 0:
-                self.future_model = deepcopy(self.model)
+        self.episodes += 1
+        if self.episodes % self.prime_update_rate == 0:
+            self.future_model.load_state_dict(self.model.state_dict())
 
-            loss_ = self._train_step(bank.getSamples(samples))
-            losses.append(loss_)
+        # for _ in range(steps):
+        #     loss_ = self._train_step(bank.getSamples(1)[0])
+        #     losses.append(loss_)
+
+        samples = bank.getSamples(steps)
+        loss_ = self._train_step(samples)
+        losses.append(loss_)
 
         if print_:
-           print("The loss is {0} for {1} trainings".format(sum(losses)/len(losses), steps*samples))
+           print("The loss is {0} for {1} trainings".format(sum(losses)/len(losses), steps))
 
     def _train_step(self, memories: List[Memory]):
-        #TODO Have now removed only grad for 1 of the outputs, is this correct or not???
         self.model.zero_grad()
         self.future_model.zero_grad()
         self.optim.zero_grad()
 
-        features = torch.zeros((len(memories), 3, 10, 10))
-        life = torch.zeros(len(memories))
-        next_features = torch.zeros((len(memories), 3, 10, 10))
-        rewards = torch.zeros(len(memories))
-        agent_actions = torch.zeros((len(memories))).type(torch.LongTensor)
-        done = torch.zeros(len(memories)).type(torch.BoolTensor)
-       
+        states = torch.cat([memory.state.unsqueeze(0) for memory in memories], dim=0)
+        states = states.to(self.device)
 
-        for i, memory in enumerate(memories):
-            features[i] = memory.state
-            life[i] = memory.life
-            next_features[i] = memory.next_state
-            rewards[i] = memory.reward
-            agent_actions[i] = memory.action
-            done[i] = memory.done
-        
-        predictions, _ = self.model(features, life).max(1)
-        targets = self._target(next_features, rewards, life, done)
+        next_states = torch.cat([memory.next_state.unsqueeze(0) for memory in memories], dim=0)
+        next_states = next_states.to(self.device)
+
+        # actions = torch.tensor([memory.action for memory in memories])
+        not_dones = torch.tensor([~memory.done for memory in memories]).to(self.device)
+        rewards = torch.tensor([memory.reward for memory in memories]).to(self.device)
+
+        predictions = self.model(states)
+        predictions = torch.tensor([prediction[memory.action].item() for memory, prediction in zip(memories, predictions)], requires_grad=True).to(self.device)
+
+        targets = self._target(next_states, rewards, not_dones)
+
         output = self.loss(targets, predictions)
+
         output.backward()
         self.optim.step()
 
         return output
 
-    def one_hot(self, a):
-        return torch.from_numpy(np.eye(4)[a])
-
-    def _target(self, next_states, rewards, life, done):
+    def _target(self, next_states, rewards, not_dones):
         with torch.no_grad():
             #Flip done because false = 0, and we want to remove it where it is 1
-            tensor = torch.mul(torch.max(self.future_model(next_states, life)), ~done)
-            futures = torch.add(rewards, torch.mul(tensor, self.gamma))
-        return futures
+            tensor = torch.mul(torch.max(self.future_model(next_states)), not_dones)
+            future = torch.add(rewards, tensor * self.gamma)
+        return future
