@@ -8,8 +8,8 @@ class Trainer:
         # params
         size: int = 10
         lifespan: int = 25
-        memory_bank_size = 3000
-        self.max_episodes: int = 20000
+        memory_bank_size = 3_000
+        self.max_episodes: int = 20_000
         self.episodes = 0
         self.game: Game = Game(size, lifespan)
         
@@ -28,7 +28,6 @@ class Trainer:
         while(True):
             if self.graphics is not None: 
                 self.graphics.updateWin(self.game, reward)
-                print("Reward", self.agent.trainer.model(self.agent._get_features(self.game.game_map)).tolist())
 
             move = self.agent.get_move(self.game)
             illegal = move == self.game.illegal_move
