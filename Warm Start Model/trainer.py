@@ -24,8 +24,6 @@ class DQTrainer:
                 self.optim.zero_grad()
                 
                 predictions = self.model(images)
-
-
                 output = self.loss(labels, predictions)
                 losses.append(output.item())
 
@@ -37,6 +35,3 @@ class DQTrainer:
         return output
 
         
-
-
-

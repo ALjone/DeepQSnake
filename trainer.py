@@ -11,7 +11,7 @@ class DQTrainer:
         self.gamma: float = 0.7
         self.train_steps: int = 0
         self.loss: torch.nn.MSELoss = torch.nn.MSELoss()
-        self.prime_update_rate = 200
+        self.prime_update_rate: int = 200
 
         if model is not None:
             self.model.load_model(model.state_dict())

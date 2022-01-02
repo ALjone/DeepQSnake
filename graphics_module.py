@@ -9,8 +9,10 @@ class Graphics:
         self.squares = []
         self.hunger = graphics.Text(graphics.Point(size+2, size-7), 0)
         self.moves = graphics.Text(graphics.Point(size+2, size-6), 0)
+        self.reward = graphics.Text(graphics.Point(size+2, size-5), 0)
         self.moves.draw(self.win)
         self.hunger.draw(self.win)
+        self.reward.draw(self.win)
         for i in range(size):
             self.squares.append([])
             for j in range(size):
@@ -19,9 +21,10 @@ class Graphics:
                 mySquare.draw(self.win)
                 self.squares[i].append(mySquare)
 
-    def updateWin(self, game_map: Game):
+    def updateWin(self, game_map: Game, reward):
         self.moves.setText("Moves: " + str(game_map.moves))
         self.hunger.setText("Hunger: " + str(game_map.moves_since_ate))
+        self.reward.setText("Reward: " + str(round(reward, 1)))
         for i in range(self.size):
                 for j in range(self.size):
                     if game_map.game_map[i][j] == 0:# and self.squares[i][j].config["fill"] != "black":

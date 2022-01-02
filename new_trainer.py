@@ -1,31 +1,34 @@
 from typing import List
 from memory_bank import Memory, MemoryBank
 import torch
-from copy import deepcopy
 from model import SnakeBrain
-import numpy as np
+
 
 class DQTrainer:
-    def __init__(self) -> None:
-        self.model: SnakeBrain = SnakeBrain(4)
-        self.gamma: float = 0.4
+    def __init__(self, model: SnakeBrain = SnakeBrain(4)) -> None:
+        self.model: SnakeBrain = model
+        #Try high
+        self.gamma: float = 0.95
         self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=0.001)
-        self.train_steps: int = 0
-        self.future_model: SnakeBrain = deepcopy(self.model)
+
+
+        self.future_model: SnakeBrain = SnakeBrain(4)
+        self.future_model.load_state_dict(self.model.state_dict())
+
         self.loss: torch.nn.MSELoss = torch.nn.MSELoss()
 
+        self.prime_update_rate: int = 10
+        self.episodes: int = 0
 
-    def train(self, bank: MemoryBank, steps = None, print_ = False):
-        #TODO Figure out these values
-        steps = 500
+
+    def train(self, bank: MemoryBank, steps = 100, print_ = False) -> None:
         self.model.train()
         losses = []
+        self.episodes += 1
+        if self.episodes % self.prime_update_rate == 0:
+            self.future_model.load_state_dict(self.model.state_dict())
+
         for _ in range(steps):
-            self.train_steps += 1
-            if self.train_steps % 20 == 0:
-                self.future_model = deepcopy(self.model)
-
-
             loss_ = self._train_step(bank.getSamples(1)[0])
             losses.append(loss_)
 
@@ -37,11 +40,10 @@ class DQTrainer:
         self.future_model.zero_grad()
         self.optim.zero_grad()
 
-        predictions = self.model(memory.state, memory.life)
+        predictions = self.model(memory.state)[0]
+        predictions = predictions[memory.action]
 
-        predictions = torch.mul(predictions, self.one_hot(memory.action))
-
-        targets = torch.mul(self.one_hot(memory.action), self._target(memory.next_state, memory.reward, memory.life, memory.done).unsqueeze(1))
+        targets = self._target(memory.next_state, memory.reward, memory.done)
 
         output = self.loss(targets, predictions)
 
@@ -50,12 +52,9 @@ class DQTrainer:
 
         return output
 
-    def one_hot(self, a):
-        return torch.from_numpy(np.eye(4)[a])
-
-    def _target(self, next_states, rewards, life, done):
+    def _target(self, next_states, reward, done):
         with torch.no_grad():
             #Flip done because false = 0, and we want to remove it where it is 1
-            tensor = torch.mul(torch.max(self.future_model(next_states, life)), ~done)
-            futures = torch.add(rewards, torch.mul(tensor, self.gamma))
-        return futures
+            tensor = torch.max(self.future_model(next_states)) * ~done
+            future = torch.add(reward, tensor * self.gamma)
+        return future

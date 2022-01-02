@@ -8,14 +8,11 @@ class Tail:
         self.next: Tail = nxt
 
 class Game:
-    def __init__(self, size, lifespan, range):
+    def __init__(self, size, lifespan):
         self.mapsize: int = size
         self.lifespan: int = lifespan
-        self.range: int = range
-        self.mid: int = int((self.mapsize-1)/2)
+        self.mid: int = int((self.mapsize)/2)
         self.illegal_move = None
-
-        
         self.reset()
         
 
@@ -26,15 +23,15 @@ class Game:
             for _ in range(self.mapsize):
                 self.game_map[i].append(0)
     
-    def _addAppel(self):
-        a = rn.randint(self.mid-self.range, self.mid+1+self.range)
-        b = rn.randint(self.mid-self.range, self.mid+1+self.range)
+    def _addApple(self):
+        a = rn.randint(0, self.mapsize-1)
+        b = rn.randint(0, self.mapsize-1)
         while(self.game_map[a][b] != 0):
-            a = rn.randint(self.mid-self.range, self.mid+1+self.range)
-            b = rn.randint(self.mid-self.range, self.mid+1+self.range)
-            #rn.randint(0, self.mapsize-1)
+            a = rn.randint(0, self.mapsize-1)
+            b = rn.randint(0, self.mapsize-1)
         self.game_map[a][b] = 3
         self.apple_pos = (a, b)
+        self.previousAppleDistance = self.distToApple()
 
     def distToApple(self):
         x = abs(self.apple_pos[0]-self.head.pos[0]) ** 2
@@ -59,28 +56,26 @@ class Game:
 
         self.__update()
         #TODO reset this
-        if warm_start:
+        if warm_start != 0:
             a = rn.randint(1, 4)
             if a == 1:
-                self.game_map[4+warm_start][4] = 3
-                self.apple_pos = (4+warm_start, 4)
-            elif a == 1:
-                self.game_map[4+warm_start][4] = 3
-                self.apple_pos = (4+warm_start, 4)
-            elif a == 1:
-                self.game_map[4][4+warm_start] = 3
-                self.apple_pos = (4, 4+warm_start)
+                self.game_map[self.mid+warm_start][self.mid] = 3
+                self.apple_pos = (self.mid+warm_start, self.mid)
+            elif a == 2:
+                self.game_map[self.mid+warm_start][self.mid] = 3
+                self.apple_pos = (self.mid+warm_start, self.mid)
+            elif a == 3:
+                self.game_map[self.mid][self.mid+warm_start] = 3
+                self.apple_pos = (self.mid, self.mid+warm_start)
             else:
-                self.game_map[4][4+warm_start] = 3
-                self.apple_pos = (4, 4+warm_start)
+                self.game_map[self.mid][self.mid+warm_start] = 3
+                self.apple_pos = (self.mid, self.mid+warm_start)
         else:
-            self._addAppel()
+            self._addApple()
         self.previousAppleDistance: float = self.distToApple()
 
     def __can_move(self, x, y):
-        if (x < 0 or x >= self.mapsize or y < 0 or y >= self.mapsize):
-            return False
-        return True
+        return (0 <= x < self.mapsize) and (0 <= y < self.mapsize)
         
     def is_dead(self):
         """Check if either the snake is out of bounds, hasn't eaten enough, or ate itself"""
@@ -150,7 +145,7 @@ class Game:
         tail.pos = [tail.pos[0]+direction[0], tail.pos[1]+direction[1]]
         self.__update()
         self.is_dead()
-        if ate: self._addAppel()
+        if ate: self._addApple()
 
         if self.dead: return
         

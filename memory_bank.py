@@ -7,7 +7,6 @@ class Memory:
         self.next_state = None
         self.reward = None
         self.action = None
-        self.life = None
         self.done = False
 
 
@@ -19,10 +18,10 @@ class MemoryBank:
         self.index: int = 0
 
     def addMemory(self, memory: Memory) -> None:
-        self.filled = True if self.index == self.capacity-1 else self.filled+False
+        self.filled = True if self.index == self.capacity-1 else self.filled
         self.memories[self.index] = memory
         self.index = (self.index + 1) % self.capacity
 
 
-    def getSamples(self, batch_size) -> Memory:
+    def getSamples(self, batch_size: int) -> np.ndarray:
         return np.array(self.memories)[np.random.choice(self.capacity-1 if self.filled else self.index-1, batch_size, )]
