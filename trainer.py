@@ -1,4 +1,6 @@
 from typing import List
+
+from torch.cuda import device_count
 from memory_bank import Memory, MemoryBank
 import torch
 from copy import deepcopy
@@ -8,6 +10,8 @@ import numpy as np
 class DQTrainer:
     def __init__(self, model: SnakeBrain = None) -> None:
         self.model: SnakeBrain = SnakeBrain(4)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         self.gamma: float = 0.7
         self.train_steps: int = 0
         self.loss: torch.nn.MSELoss = torch.nn.MSELoss()
@@ -19,6 +23,9 @@ class DQTrainer:
         self.optim: torch.optim.Adam = torch.optim.Adadelta(self.model.parameters(), lr=0.001)
         self.future_model: SnakeBrain = deepcopy(self.model)
 
+        self.model.to(device)
+        self.future_model.to(device)
+
     def train(self, bank: MemoryBank, steps = None, print_ = False):
         #TODO Figure out these values
         steps = 50
@@ -29,7 +36,6 @@ class DQTrainer:
             self.train_steps += 1
             if self.train_steps % self.prime_update_rate == 0:
                 self.future_model = deepcopy(self.model)
-
 
             loss_ = self._train_step(bank.getSamples(samples))
             losses.append(loss_)
@@ -59,10 +65,6 @@ class DQTrainer:
             agent_actions[i] = memory.action
             done[i] = memory.done
         
-        #predictions = self.model(features, life)
-        #predictions = torch.mul(predictions, self.one_hot(agent_actions))
-        #targets = torch.mul(self.one_hot(agent_actions), self._target(next_features, rewards, life, done).unsqueeze(1))
-        #output = self.loss(targets, predictions)
         predictions, _ = self.model(features, life).max(1)
         targets = self._target(next_features, rewards, life, done)
         output = self.loss(targets, predictions)

@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from typing import List
 
 class Memory:
     def __init__(self) -> None:
@@ -23,5 +24,7 @@ class MemoryBank:
         self.index = (self.index + 1) % self.capacity
 
 
-    def getSamples(self, batch_size: int) -> np.ndarray:
-        return np.array(self.memories)[np.random.choice(self.capacity-1 if self.filled else self.index-1, batch_size, )]
+    def getSamples(self, batch_size: int) -> List[Memory]:
+        return [
+            self.memories[i] for i in np.random.choice(self.capacity-1 if self.filled else self.index-1, batch_size, )
+        ]

@@ -2,14 +2,14 @@ from agent import DQAgent
 import torch
 from game_map import Game
 from datetime import datetime
-
+import time
 class Trainer:
     def __init__(self, load_warmstart_model: bool = False, load_model: bool = False) -> None:
         # params
         size: int = 10
         lifespan: int = 25
         memory_bank_size = 3000
-        self.max_episodes: int = 2000
+        self.max_episodes: int = 20000
         self.episodes = 0
         self.game: Game = Game(size, lifespan)
         
@@ -51,7 +51,10 @@ class Trainer:
                 self.episodes += 1
                 self.agent.make_memory(self.game, 5, illegal)
                 self.game.reset(warm_start=self.warm_start)
+                start = time.time()
                 self.agent.train()
+                stop = time.time()
+
                 return score
 
     def main(self):
@@ -60,12 +63,14 @@ class Trainer:
         half = False
         threefourths = False
 
+        print(f"GPU available: {torch.cuda.is_available()}")
+
         while (self.episodes < self.max_episodes):
             avgscore += self.play_episode()
 
 
-            if self.episodes%10 == 0 and self.episodes != 0:
-                print("Over the last 10 games I've got an average score of", avgscore/10, "Played in total", self.episodes, "games")
+            if self.episodes%100 == 0 and self.episodes != 0:
+                print("Over the last 100 games I've got an average score of", avgscore/100, "Played in total", self.episodes, "games")
                 avgscore = 0
             
             
