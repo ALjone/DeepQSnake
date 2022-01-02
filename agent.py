@@ -19,7 +19,7 @@ class DQAgent:
             self.trainer: DQTrainer = DQTrainer()
 
         #TODO should this be over 1?
-        self.epsilon = 1/(max_episodes*1)
+        self.epsilon = 1/(max_episodes*0.9)
         self.previous_memory = None
 
     def _exploration_rate(self):

@@ -9,7 +9,7 @@ class DQTrainer:
     def __init__(self, model: SnakeBrain = SnakeBrain(4)) -> None:
         self.model: SnakeBrain = model
         #Try high
-        self.gamma: float = 0.95
+        self.gamma: float = 0.998
         self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=0.001)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -22,23 +22,24 @@ class DQTrainer:
 
         self.loss: torch.nn.MSELoss = torch.nn.MSELoss()
 
-        self.prime_update_rate: int = 10
+        self.prime_update_rate: int = 15
         self.episodes: int = 0
 
 
-    def train(self, bank: MemoryBank, steps = 512, print_ = False) -> None:
+    def train(self, bank: MemoryBank, steps = 128, print_ = False) -> None:
         self.model.train()
         losses = []
         self.episodes += 1
         if self.episodes % self.prime_update_rate == 0:
             self.future_model.load_state_dict(self.model.state_dict())
 
-        samples = bank.getSamples(steps)
-        loss_ = self._train_step(samples)
-        losses.append(loss_)
+        for i in range(10):
+            samples = bank.getSamples(steps)
+            loss_ = self._train_step(samples)
+        #losses.append(loss_)
 
-        if print_:
-           print("The loss is {0} for {1} trainings".format(sum(losses)/len(losses), steps))
+        #if print_:
+        #   print("The loss is {0} for {1} trainings".format(sum(losses)/len(losses), steps))
 
     def _train_step(self, memories: List[Memory]):
         self.model.zero_grad()

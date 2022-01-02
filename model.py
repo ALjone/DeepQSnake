@@ -4,8 +4,8 @@ class SnakeBrain(torch.nn.Module):
     def __init__(self, output: int):
         super(SnakeBrain, self).__init__()
         self.conv1 = torch.nn.Conv2d(3, 16, 3)
-        self.conv2 = torch.nn.Conv2d(16, 16, 3)
-        self.conv3 = torch.nn.Conv2d(16, 16, 3)
+        self.conv2 = torch.nn.Conv2d(16, 32, 3)
+        self.conv3 = torch.nn.Conv2d(32, 16, 3)
         self.fc1 = torch.nn.Linear(256, output)
 
         self.relu = torch.nn.ReLU()

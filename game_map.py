@@ -127,8 +127,8 @@ class Game:
         self.moves += 1
         x = self.head.pos[0]+direction[0]
         y = self.head.pos[1]+direction[1]
-        if not self.__can_move(x, y):
-            #Should be incorporated to _is_dead
+        if not self.__can_move(x, y) or (self.game_map[x][y] == 2):
+            
             self.dead = True
             return
 

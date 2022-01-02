@@ -2,6 +2,7 @@ from agent import DQAgent
 import torch
 from game_map import Game
 from datetime import datetime
+import time
 
 class Trainer:
     def __init__(self, load_warmstart_model: bool = False, load_model: bool = False) -> None:
@@ -9,7 +10,7 @@ class Trainer:
         size: int = 10
         lifespan: int = 50
         memory_bank_size = 10000
-        self.max_episodes: int = 20000
+        self.max_episodes: int = 10000
         self.episodes = 0
         self.game: Game = Game(size, lifespan)
         
@@ -22,13 +23,15 @@ class Trainer:
         if load_model: 
             self.agent.trainer.model = torch.load("previous_model")
         self.warm_start = 0
-        
+    
     def run(self):
         reward = 0
         while(True):
             if self.graphics is not None: 
                 self.graphics.updateWin(self.game, reward)
-
+                #print(self.agent.trainer.model(self.agent._get_features(self.game.game_map)))
+            
+            time.sleep(0.5)
             move = self.agent.get_move(self.game)
             self.game.do_action(move)
             reward += self.agent._get_reward(self.game)
@@ -64,6 +67,10 @@ class Trainer:
                 print("Over the last 100 games I've got an average score of", avgscore/100, "Played in total", self.episodes, "games")
                 avgscore = 0
 
+
+        torch.save(self.agent.trainer.model, 'model_'+ datetime.now().strftime("%m_%d_%Y%H_%M_%S"))
+        torch.save(self.agent.trainer.model, 'previous_model')
+
         input("Ready? ")
         self.agent.testing = True
         from graphics_module import Graphics
@@ -74,8 +81,5 @@ class Trainer:
             self.run()
             self.game.reset(warm_start=self.warm_start)
 
-        torch.save(self.agent.trainer.model, 'model_'+ datetime.now().strftime("%m_%d_%Y%H_%M_%S"))
-        torch.save(self.agent.trainer.model, 'previous_model')
-
-trainer = Trainer(load_model = True, load_warmstart_model = True)
+trainer = Trainer(load_model = True, load_warmstart_model = False)
 trainer.main()
