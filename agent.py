@@ -3,7 +3,7 @@ import torch
 from memory_bank import Memory, MemoryBank
 from game_map import Game
 import random as rn
-from new_trainer import DQTrainer
+from trainer import DQTrainer
 
 class DQAgent:
     def __init__(self, max_episodes: int, load_path: str = None, bank_size: int = 100000) -> None:
