@@ -1,5 +1,6 @@
 from game_map import Game
 import graphics
+import torch
 
 class Graphics:
     def __init__(self, size):
@@ -21,18 +22,19 @@ class Graphics:
                 mySquare.draw(self.win)
                 self.squares[i].append(mySquare)
 
-    def updateWin(self, game_map: Game, reward):
-        self.moves.setText("Moves: " + str(game_map.moves))
-        self.hunger.setText("Hunger: " + str(game_map.moves_since_ate))
+    def updateWin(self, game: Game, reward):
+        self.moves.setText("Moves: " + str(game.moves))
+        self.hunger.setText("Hunger: " + str(game.moves_since_ate))
         self.reward.setText("Reward: " + str(round(reward, 1)))
+        game_map = game.game_map
         for i in range(self.size):
                 for j in range(self.size):
-                    if game_map.game_map[i][j] == 0:# and self.squares[i][j].config["fill"] != "black":
+                    if torch.sum(game_map[:, i, j] == 0) and self.squares[i][j].config["fill"] != "black":
                         self.squares[i][j].setFill("black")
-                    if game_map.game_map[i][j] == 1:# and self.squares[i][j].config["fill"] != "white":
+                    if game_map[0, i, j] == 1 and self.squares[i][j].config["fill"] != "white":
                         self.squares[i][j].setFill("white")
-                    if game_map.game_map[i][j] == 2:# and self.squares[i][j].config["fill"] != "grey":
+                    if game_map[1, i, j] == 1 and self.squares[i][j].config["fill"] != "grey":
                         self.squares[i][j].setFill("grey")
-                    if game_map.game_map[i][j] == 3:# and self.squares[i][j].config["fill"] != "red":
+                    if game_map[2, i, j] == 1 and self.squares[i][j].config["fill"] != "red":
                         self.squares[i][j].setFill("red")    
         self.win.update()

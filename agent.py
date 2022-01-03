@@ -1,18 +1,18 @@
 from typing import List
 import torch
 from memory_bank import Memory, MemoryBank
-from game_map import Game
+from game import Game
 import random as rn
 from trainer import DQTrainer
 
 class DQAgent:
     def __init__(self, max_episodes: int, load_path: str = None, bank_size: int = 100000) -> None:
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.bank: MemoryBank = MemoryBank(bank_size)
         self.testing = False
         self.episodes = 0
-        if load_path is not None:
+        if load_path is not None:   
             model = torch.load(load_path)
             self.trainer: DQTrainer = DQTrainer(model = model)
         else:
@@ -36,7 +36,7 @@ class DQAgent:
 
     def make_memory(self, game: Game, move: int) -> None:
         memory = Memory()
-        memory.state = self._get_features(game.game_map)
+        memory.state = game.game_map
         memory.action = move
 
         if self.previous_memory is not None:
@@ -51,20 +51,12 @@ class DQAgent:
     def train(self):
         self._train()
 
-    def _get_features(self, game_map: List[List[int]]):
-        features = torch.zeros((3, len(game_map), len(game_map)))
-        for i in range(len(game_map)):
-            for j in range(len(game_map)):
-                tile = game_map[i][j]
-                if tile != 0:
-                    features[tile-1, i, j] = 1
-        return features
 
     def _get_reward(self, game: Game) -> float:
         if game.ate_last_turn:
-            return 1.0
+            return 10.0
         if game.dead:
-            return -1.0
+            return -10.0
         if game.distToApple() < game.previousAppleDistance:
             return 0.2
         if game.distToApple() >= game.previousAppleDistance:
@@ -73,7 +65,7 @@ class DQAgent:
 
     def _predict(self, game: Game):
         self.trainer.model.eval()
-        return torch.argmax(self.trainer.model(self._get_features(game.game_map).to(self.device)))
+        return torch.argmax(self.trainer.model(game.game_map.to(self.device)))
 
     def _train(self):
         self.trainer.model.train()

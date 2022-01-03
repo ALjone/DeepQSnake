@@ -1,6 +1,6 @@
 from agent import DQAgent
 import torch
-from game_map import Game
+from game import Game
 from datetime import datetime
 import time
 
@@ -9,8 +9,8 @@ class Trainer:
         # params
         size: int = 10
         lifespan: int = 50
-        memory_bank_size = 10000
-        self.max_episodes: int = 10000
+        memory_bank_size = 3000
+        self.max_episodes: int = 1
         self.episodes = 0
         self.game: Game = Game(size, lifespan)
         
@@ -20,9 +20,8 @@ class Trainer:
         else:
             self.agent = DQAgent(self.max_episodes, bank_size = memory_bank_size)
             
-        if load_model: 
+        if load_model:
             self.agent.trainer.model = torch.load("previous_model")
-        self.warm_start = 0
     
     def run(self):
         reward = 0
@@ -50,7 +49,7 @@ class Trainer:
                 score = self.game.score
                 self.episodes += 1
                 self.agent.make_memory(self.game, 5)
-                self.game.reset(warm_start=self.warm_start)
+                self.game.reset()
                 self.agent.train()
 
                 return score
@@ -79,7 +78,7 @@ class Trainer:
             if self.graphics is None:
                 self.graphics = Graphics(self.game.mapsize)
             self.run()
-            self.game.reset(warm_start=self.warm_start)
+            self.game.reset()
 
-trainer = Trainer(load_model = True, load_warmstart_model = False)
+trainer = Trainer(load_model = False, load_warmstart_model = True)
 trainer.main()

@@ -19,6 +19,11 @@ class MemoryBank:
         self.index: int = 0
 
     def addMemory(self, memory: Memory) -> None:
+        if memory.reward == 1:
+            for _ in range(20):
+                self.filled = True if self.index == self.capacity-1 else self.filled
+                self.memories[self.index] = memory
+                self.index = (self.index + 1) % self.capacity
         self.filled = True if self.index == self.capacity-1 else self.filled
         self.memories[self.index] = memory
         self.index = (self.index + 1) % self.capacity
@@ -26,5 +31,5 @@ class MemoryBank:
 
     def getSamples(self, batch_size: int) -> List[Memory]:
         return [
-            self.memories[i] for i in np.random.choice(self.capacity-1 if self.filled else self.index-1, batch_size, )
+            self.memories[i] for i in np.random.choice(self.capacity-1 if self.filled else self.index, batch_size, )
         ]
