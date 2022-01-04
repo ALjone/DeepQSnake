@@ -61,8 +61,6 @@ class DQAgent:
             return 1.0
         if game.dead:
             return -1.0
-        else: 
-            return 0
         if game.distToApple() < game.previousAppleDistance:
             return 0.2
         if game.distToApple() >= game.previousAppleDistance:

@@ -1,3 +1,4 @@
+from ReplayMemory import ReplayMemory
 from agent import DQAgent
 import torch
 from game import Game
@@ -8,9 +9,9 @@ class Trainer:
     def __init__(self, load_warmstart_model: bool = False, load_model: bool = False) -> None:
         # params
         size: int = 10
-        lifespan: int = 50
-        memory_bank_size = 10000
-        self.max_episodes: int = 20000
+        lifespan: int = 100
+        memory_bank_size = 2000
+        self.max_episodes: int = 5000
         self.episodes = 0
         self.game: Game = Game(size, lifespan)
         
@@ -82,6 +83,8 @@ class Trainer:
         self.agent.testing = True
         from graphics_module import Graphics
         self.graphics: Graphics = None
+        #That's how much I'm gonna bother watching
+        self.game.lifespan = 25
         for _ in range(100):
             if self.graphics is None:
                 self.graphics = Graphics(self.game.mapsize)
@@ -91,7 +94,7 @@ class Trainer:
 trainer = Trainer(load_model = False, load_warmstart_model = False)
 trainer.main()
 
-pos = 0
+"""pos = 0
 neg = 0
 for memory in trainer.agent.bank.memory:
     if memory.reward == 1.0:
@@ -100,4 +103,7 @@ for memory in trainer.agent.bank.memory:
         neg += 1
 
 print("Percentage of apple memories to non apple memories:", (pos/(10000))*100)
-print("Percentage of death memories to non death memories:", (neg/(10000))*100)
+print("Percentage of death memories to non death memories:", (neg/(10000))*100)"""
+input("Ready again?")
+from ReplayMemoryGraphic import ReplayGraphics
+graphic = ReplayGraphics(10, trainer.agent.bank)

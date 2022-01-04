@@ -9,7 +9,7 @@ class DQTrainer:
         self.model: SnakeBrain = model
         #Try high
         self.gamma: float = 0.999
-        self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=1e-5)
+        self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=1e-4)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
