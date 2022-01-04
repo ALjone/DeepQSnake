@@ -1,6 +1,5 @@
 from typing import List
-from torch.cuda import memory
-from memory_bank import Memory, MemoryBank
+from ReplayMemory import ReplayMemory, Transition
 import torch
 from model import SnakeBrain
 
@@ -9,8 +8,8 @@ class DQTrainer:
     def __init__(self, model: SnakeBrain = SnakeBrain(4)) -> None:
         self.model: SnakeBrain = model
         #Try high
-        self.gamma: float = 0.98
-        self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        self.gamma: float = 0.985
+        self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=1e-5)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -20,57 +19,69 @@ class DQTrainer:
         self.model.to(self.device)
         self.future_model.to(self.device)
 
-        self.loss: torch.nn.MSELoss = torch.nn.MSELoss()
+        self.loss: torch.nn.MSELoss = torch.nn.SmoothL1Loss()#MSELoss()
 
         self.prime_update_rate: int = 15
         self.episodes: int = 0
 
 
-    def train(self, bank: MemoryBank, steps = 128, print_ = False) -> None:
+
+    def train(self, bank: ReplayMemory, steps = 512, print_ = False) -> None:
+        if len(bank) < steps:
+            return
         self.model.train()
         losses = []
         self.episodes += 1
         if self.episodes % self.prime_update_rate == 0:
             self.future_model.load_state_dict(self.model.state_dict())
 
-        for i in range(10):
-            samples = bank.getSamples(steps)
-            loss_ = self._train_step(samples)
+        samples = bank.sample(steps)
+        loss_ = self._train_batch(samples)
         #losses.append(loss_)
 
         #if print_:
         #   print("The loss is {0} for {1} trainings".format(sum(losses)/len(losses), steps))
 
-    def _train_step(self, memories: List[Memory]):
-        self.model.zero_grad()
-        self.future_model.zero_grad()
+
+    def _train_batch(self, memories: List[Transition]):
+
+        batch: Transition = Transition(*zip(*memories))
+
+        states = torch.stack(batch.state).to(self.device)
+        actions = torch.stack(batch.action).to(self.device)
+
+        done_mask = torch.tensor(tuple(map(lambda s: s is not None,
+                                          batch.next_state)), device=self.device, dtype=torch.bool)
+
+        next_states = torch.stack([s for s in batch.next_state
+                                                if s is not None])
+        
+        rewards = torch.stack(batch.reward).to(self.device)
+
+        predictions = self.model(states).gather(1, actions)
+
+
+        targets = self._target(next_states, rewards, done_mask)
+
+        #print(targets.unsqueeze(1))
+        #print(predictions)
+        #print(targets.unsqueeze(1)-predictions)
+        #print("Diff:", torch.max(predictions).item()-torch.min(predictions).item())
+        #print("Size of biggest:", torch.max(predictions).item())
+        #input()
+
+        loss = self.loss(predictions, targets.unsqueeze(1))
+        
         self.optim.zero_grad()
-
-        states = torch.cat([memory.state.unsqueeze(0) for memory in memories], dim=0)
-        states = states.to(self.device)
-
-        next_states = torch.cat([memory.next_state.unsqueeze(0) for memory in memories], dim=0)
-        next_states = next_states.to(self.device)
-
-        # actions = torch.tensor([memory.action for memory in memories])
-        not_dones = torch.tensor([~memory.done for memory in memories]).to(self.device)
-        rewards = torch.tensor([memory.reward for memory in memories]).to(self.device)
-
-        predictions = self.model(states)
-        predictions = torch.tensor([prediction[memory.action].item() for memory, prediction in zip(memories, predictions)], requires_grad=True).to(self.device)
-
-        targets = self._target(next_states, rewards, not_dones)
-
-        output = self.loss(targets, predictions)
-
-        output.backward()
+        loss.backward()
         self.optim.step()
+        return loss
 
-        return output
-
-    def _target(self, next_states, rewards, not_dones):
+    def _target(self, next_states, rewards, done_mask):
         with torch.no_grad():
+            self.future_model.eval()
             #Flip done because false = 0, and we want to remove it where it is 1
-            tensor = torch.mul(torch.max(self.future_model(next_states)), not_dones)
-            future = torch.add(rewards, tensor * self.gamma)
-        return future
+            future_values = torch.zeros(done_mask.shape[0], device=self.device)
+            future_values[done_mask] = self.future_model(next_states).max(1)[0].detach()
+            targets = rewards + (future_values * self.gamma)
+        return targets

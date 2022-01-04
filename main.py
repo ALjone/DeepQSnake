@@ -9,8 +9,8 @@ class Trainer:
         # params
         size: int = 10
         lifespan: int = 50
-        memory_bank_size = 3000
-        self.max_episodes: int = 1
+        memory_bank_size = 10000
+        self.max_episodes: int = 20000
         self.episodes = 0
         self.game: Game = Game(size, lifespan)
         
@@ -22,35 +22,38 @@ class Trainer:
             
         if load_model:
             self.agent.trainer.model = torch.load("previous_model")
+
+        self.moves = [0, 0, 0, 0]
     
     def run(self):
         reward = 0
         while(True):
             if self.graphics is not None: 
                 self.graphics.updateWin(self.game, reward)
-                #print(self.agent.trainer.model(self.agent._get_features(self.game.game_map)))
             
-            time.sleep(0.5)
-            move = self.agent.get_move(self.game)
+            model_made, move = self.agent.get_move(self.game)
             self.game.do_action(move)
             reward += self.agent._get_reward(self.game)
 
             if(self.game.dead):
-                self.agent.get_move(self.game)
-                break    
+                model_made, move = self.agent.get_move(self.game)
+                self.graphics.updateWin(self.game, reward)
+                break
 
     def play_episode(self):
         while(True):
-            move = self.agent.get_move(self.game)
+            model_made, move = self.agent.get_move(self.game)
+
             self.agent.make_memory(self.game, move)
             self.game.do_action(move)
+
+            if model_made: self.moves[move] += 1
 
             if(self.game.dead):
                 score = self.game.score
                 self.episodes += 1
                 self.agent.make_memory(self.game, 5)
                 self.game.reset()
-                self.agent.train()
 
                 return score
 
@@ -60,10 +63,13 @@ class Trainer:
         avgscore = 0
         while (self.episodes < self.max_episodes):
             avgscore += self.play_episode()
+            self.agent.train()
 
 
-            if self.episodes%100 == 0 and self.episodes != 0:
-                print("Over the last 100 games I've got an average score of", avgscore/100, "Played in total", self.episodes, "games")
+            if self.episodes%1000 == 0 and self.episodes != 0:
+                print("Over the last 1000 games I've got an average score of", avgscore/1000, "Played in total", self.episodes, "games.",
+                 "Last 1000 games the model made moves were:", self.moves)
+                self.moves = [0, 0, 0, 0]
                 avgscore = 0
 
 
@@ -80,5 +86,5 @@ class Trainer:
             self.run()
             self.game.reset()
 
-trainer = Trainer(load_model = False, load_warmstart_model = True)
+trainer = Trainer(load_model = False, load_warmstart_model = False)
 trainer.main()

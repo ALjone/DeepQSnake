@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 from typing import List
 
 class Memory:
@@ -19,8 +18,8 @@ class MemoryBank:
         self.index: int = 0
 
     def addMemory(self, memory: Memory) -> None:
-        if memory.reward == 1:
-            for _ in range(20):
+        if memory.reward == 10.0:
+            for _ in range(10):
                 self.filled = True if self.index == self.capacity-1 else self.filled
                 self.memories[self.index] = memory
                 self.index = (self.index + 1) % self.capacity

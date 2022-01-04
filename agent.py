@@ -4,12 +4,13 @@ from memory_bank import Memory, MemoryBank
 from game import Game
 import random as rn
 from trainer import DQTrainer
+from ReplayMemory import ReplayMemory
 
 class DQAgent:
     def __init__(self, max_episodes: int, load_path: str = None, bank_size: int = 100000) -> None:
         
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.bank: MemoryBank = MemoryBank(bank_size)
+        self.bank: ReplayMemory = ReplayMemory(bank_size)
         self.testing = False
         self.episodes = 0
         if load_path is not None:   
@@ -23,33 +24,36 @@ class DQAgent:
         self.previous_memory = None
 
     def _exploration_rate(self):
-        return max((1-(self.epsilon*self.episodes)), 0.1)
+        return max((0.9-(self.epsilon*self.episodes)), 0.01)
 
     def get_move(self, game: Game):
+        """True if prediction was made by the model, false if random"""
         if self.testing:
             prediction = self._predict(game)
-            return prediction
+            return (True, prediction)
         prediction = self._predict(game)
         if rn.random() < self._exploration_rate():
             prediction = rn.randint(0, 3)
-            return prediction
+            return (False, prediction)
+        return (True, prediction)
 
     def make_memory(self, game: Game, move: int) -> None:
         memory = Memory()
-        memory.state = game.game_map
+        memory.state = game.get_map()
         memory.action = move
 
         if self.previous_memory is not None:
-            self.previous_memory.next_state = memory.state
-            self.previous_memory.reward = self._get_reward(game)
-            self.previous_memory.done = game.dead
 
-            self.bank.addMemory(self.previous_memory)
+            self.bank.push(self.previous_memory.state, torch.tensor([self.previous_memory.action]),
+            memory.state if not game.dead else None, torch.tensor(self._get_reward(game)))
 
         self.previous_memory = memory if not game.dead else None
 
     def train(self):
-        self._train()
+        #Assumes training only ones per game
+        self.episodes += 1
+        self.trainer.model.train()
+        self.trainer.train(self.bank)
 
 
     def _get_reward(self, game: Game) -> float:
@@ -65,11 +69,4 @@ class DQAgent:
 
     def _predict(self, game: Game):
         self.trainer.model.eval()
-        return torch.argmax(self.trainer.model(game.game_map.to(self.device)))
-
-    def _train(self):
-        self.trainer.model.train()
-        self.trainer.train(self.bank)
-
-
-        
+        return torch.argmax(self.trainer.model(game.get_map().to(self.device)))
