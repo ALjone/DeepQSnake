@@ -4,19 +4,23 @@ from ReplayMemory import ReplayMemory
 from game import Game
 import graphics
 import torch
+from model import SnakeBrain
 
 class ReplayGraphics:
-    def __init__(self, size, bank: ReplayMemory):
+    def __init__(self, size, bank: ReplayMemory, model: SnakeBrain):
         self.size = size
+        self.model = model
         self.win = graphics.GraphWin(height = 250, width = 400) # create a window
         self.win.setCoords(0, 0, size+4, size) # set the coordinates of the window; bottom left is (0, 0) and top right is (10, 10)
         self.squares = []
         self.reward = graphics.Text(graphics.Point(size+2, size-5), 0)
         self.dead = graphics.Text(graphics.Point(size+2, size-4), 0)
         self.action = graphics.Text(graphics.Point(size+2, size-6), 0)
+        self.future = graphics.Text(graphics.Point(size+2, size-7), 0)
         self.reward.draw(self.win)
         self.dead.draw(self.win)
         self.action.draw(self.win)
+        self.future.draw(self.win)
         for i in range(size):
             self.squares.append([])
             for j in range(size):
@@ -26,14 +30,16 @@ class ReplayGraphics:
                 self.squares[i].append(mySquare)
 
         for memory in bank.sample(len(bank)):
-            self.updateWin(memory.state, memory.reward, memory.action, True if memory.next_state is None else False)
+            future = str(round(torch.max(model(memory.next_state)).item(), 2)) if memory.next_state is not None else "Ingen"
+            self.updateWin(memory.state, memory.reward, memory.action, True if memory.next_state is None else False, future)
             self.win.getKey()
 
 
 
-    def updateWin(self, game_map, reward, action, dead):
+    def updateWin(self, game_map, reward, action, dead, future):
         self.reward.setText("Reward: " + str(round(reward.item(), 1)))
         self.dead.setText("Final state: True" if dead else "Final state: False")
+        self.future.setText("Future: " + future)
         if action == 0:
             self.action.setText("West")
         if action == 1:

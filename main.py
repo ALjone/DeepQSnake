@@ -11,7 +11,7 @@ class Trainer:
         size: int = 10
         lifespan: int = 100
         memory_bank_size = 2000
-        self.max_episodes: int = 5000
+        self.max_episodes: int = 50
         self.episodes = 0
         self.game: Game = Game(size, lifespan)
         
@@ -106,4 +106,4 @@ print("Percentage of apple memories to non apple memories:", (pos/(10000))*100)
 print("Percentage of death memories to non death memories:", (neg/(10000))*100)"""
 input("Ready again?")
 from ReplayMemoryGraphic import ReplayGraphics
-graphic = ReplayGraphics(10, trainer.agent.bank)
+graphic = ReplayGraphics(10, trainer.agent.bank, trainer.agent.trainer.model)
