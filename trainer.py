@@ -8,7 +8,7 @@ class DQTrainer:
     def __init__(self, model: SnakeBrain = SnakeBrain(4)) -> None:
         self.model: SnakeBrain = model
         #Try high
-        self.gamma: float = 0.985
+        self.gamma: float = 0.999
         self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=1e-5)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -21,7 +21,7 @@ class DQTrainer:
 
         self.loss: torch.nn.MSELoss = torch.nn.SmoothL1Loss()#MSELoss()
 
-        self.prime_update_rate: int = 15
+        self.prime_update_rate: int = 40
         self.episodes: int = 0
 
 

@@ -35,7 +35,7 @@ class Trainer:
             self.game.do_action(move)
             reward += self.agent._get_reward(self.game)
 
-            if(self.game.dead):
+            if(self.game.final_state):
                 model_made, move = self.agent.get_move(self.game)
                 self.graphics.updateWin(self.game, reward)
                 break
@@ -49,10 +49,10 @@ class Trainer:
 
             if model_made: self.moves[move] += 1
 
-            if(self.game.dead):
+            if(self.game.final_state):
                 score = self.game.score
                 self.episodes += 1
-                self.agent.make_memory(self.game, 5)
+                self.agent.make_memory(self.game, None)
                 self.game.reset()
 
                 return score
@@ -67,8 +67,10 @@ class Trainer:
 
 
             if self.episodes%1000 == 0 and self.episodes != 0:
+                printlist = [round(num*self.agent._exploration_rate(), 0) for num in self.moves]
                 print("Over the last 1000 games I've got an average score of", avgscore/1000, "Played in total", self.episodes, "games.",
-                 "Last 1000 games the model made moves were:", self.moves)
+                "Last 1000 games the model made moves were:", printlist)
+                print("Current exploration rate:", round(self.agent._exploration_rate(), 2))    
                 self.moves = [0, 0, 0, 0]
                 avgscore = 0
 
@@ -88,3 +90,14 @@ class Trainer:
 
 trainer = Trainer(load_model = False, load_warmstart_model = False)
 trainer.main()
+
+pos = 0
+neg = 0
+for memory in trainer.agent.bank.memory:
+    if memory.reward == 1.0:
+        pos += 1
+    if memory.reward == -1.0:
+        neg += 1
+
+print("Percentage of apple memories to non apple memories:", (pos/(10000))*100)
+print("Percentage of death memories to non death memories:", (neg/(10000))*100)

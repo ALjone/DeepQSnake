@@ -45,9 +45,9 @@ class DQAgent:
         if self.previous_memory is not None:
 
             self.bank.push(self.previous_memory.state, torch.tensor([self.previous_memory.action]),
-            memory.state if not game.dead else None, torch.tensor(self._get_reward(game)))
+            memory.state if not game.final_state else None, torch.tensor(self._get_reward(game)))
 
-        self.previous_memory = memory if not game.dead else None
+        self.previous_memory = memory if not game.final_state else None
 
     def train(self):
         #Assumes training only ones per game
@@ -58,9 +58,11 @@ class DQAgent:
 
     def _get_reward(self, game: Game) -> float:
         if game.ate_last_turn:
-            return 10.0
+            return 1.0
         if game.dead:
-            return -10.0
+            return -1.0
+        else: 
+            return 0
         if game.distToApple() < game.previousAppleDistance:
             return 0.2
         if game.distToApple() >= game.previousAppleDistance:

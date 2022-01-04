@@ -45,7 +45,7 @@ class Game:
         self.__game_map: Game_map = Game_map(self.mapsize)
 
         #Set head and tail
-        head: Tail = Tail(rn.randint(0, self.mapsize-1), rn.randint(0, self.mapsize-1), None)
+        head: Tail = Tail(rn.randint(1, self.mapsize-2), rn.randint(1, self.mapsize-2), None)
         self.tail: Tail = head
         self.head: Tail = head
         self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
@@ -55,6 +55,7 @@ class Game:
         self.moves: int = 0
         self.score = 0
         self.dead: bool = False
+        self.final_state: bool = False
         self.ate_last_turn: bool = False
 
         #Add apple
@@ -70,18 +71,20 @@ class Game:
         x = self.head.x_pos
         y = self.head.y_pos
         if self.moves_since_ate >= self.lifespan:
-            self.dead = True
+            self.final_state = True
 
         tail = self.tail
         while (tail.next != None):
             if (tail.x_pos == x and tail.y_pos == y):
                 self.dead = True
+                self.final_state = True
             tail = tail.next
         
         if not self.__can_move(x, y):
             self.dead = True
+            self.final_state = True
 
-        return self.dead
+        return self.dead + self.final_state
 
     def do_action(self, action):
         """Completes the given action and returns the new map"""
@@ -141,6 +144,7 @@ class Game:
 
         if not self.__can_move(x, y):
             self.dead = True
+            self.final_state = True
             return
 
         self.previousAppleDistance = self.distToApple()

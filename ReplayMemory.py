@@ -13,6 +13,9 @@ class ReplayMemory(object):
 
     def push(self, *args):
         """Save a transition"""
+        if args[3] == 1.0:
+            for i in range(15):
+                self.memory.append(Transition(*args))
 
         self.memory.append(Transition(*args))
 
