@@ -1,54 +1,49 @@
-from ReplayMemory import ReplayMemory
 from agent import DQAgent
 import torch
 from game import Game
 from datetime import datetime
 import time
+from hyperparams import Hyperparams
 
 class Trainer:
-    def __init__(self, load_warmstart_model: bool = False, load_model: bool = False) -> None:
+    def __init__(self, hyperparams: Hyperparams) -> None:
         # params
-        size: int = 10
-        lifespan: int = 100
-        memory_bank_size = 2000
-        self.max_episodes: int = 50
-        self.episodes = 0
+        size: int = hyperparams.game.mapsize
+        lifespan: int = hyperparams.game.lifespan
+        self.max_episodes: int = hyperparams.max_episodes
+        self.episodes = 0 
         self.game: Game = Game(size, lifespan)
         
-        if load_warmstart_model:
-            print("Loading warm-start model")
-            self.agent = DQAgent(self.max_episodes, bank_size = memory_bank_size, load_path="warm_start_model")
-        else:
-            self.agent = DQAgent(self.max_episodes, bank_size = memory_bank_size)
-            
-        if load_model:
-            self.agent.trainer.model = torch.load("previous_model")
+        self.agent = DQAgent(hyperparams)
 
-        self.moves = [0, 0, 0, 0]
+        self.action_space = hyperparams.action_space
+        self.moves = [0]*self.action_space
+        self.update_rate = hyperparams.update_rate
     
+    #TODO Rename to test, make it take in graphic: bool, and print stuff, maybe
     def run(self):
         reward = 0
         while(True):
             if self.graphics is not None: 
                 self.graphics.updateWin(self.game, reward)
             
-            model_made, move = self.agent.get_move(self.game)
+            move = self.agent.get_move(self.game)
             self.game.do_action(move)
-            reward += self.agent._get_reward(self.game)
+            reward += self.game.get_reward()
 
             if(self.game.final_state):
-                model_made, move = self.agent.get_move(self.game)
+                move = self.agent.get_move(self.game)
                 self.graphics.updateWin(self.game, reward)
                 break
 
     def play_episode(self):
         while(True):
-            model_made, move = self.agent.get_move(self.game)
+            move = self.agent.get_move(self.game)
 
             self.agent.make_memory(self.game, move)
             self.game.do_action(move)
 
-            if model_made: self.moves[move] += 1
+            self.moves[move] += 1
 
             if(self.game.final_state):
                 score = self.game.score
@@ -66,15 +61,15 @@ class Trainer:
             avgscore += self.play_episode()
             self.agent.train()
 
-
-            if self.episodes%1000 == 0 and self.episodes != 0:
-                printlist = [round(num*self.agent._exploration_rate(), 0) for num in self.moves]
-                print("Over the last 1000 games I've got an average score of", avgscore/1000, "Played in total", self.episodes, "games.",
-                "Last 1000 games the model made moves were:", printlist)
-                print("Current exploration rate:", round(self.agent._exploration_rate(), 2))    
-                self.moves = [0, 0, 0, 0]
+            #TODO save models to a checkpoint folder, and make a script that easily visualizes it
+            if self.episodes%self.update_rate == 0 and self.episodes != 0:
+                printlist = [round(num/sum(self.moves), 2) for num in self.moves]
+                print(f"Over the last {self.update_rate} games I've got an average score of", avgscore/self.update_rate, "Played in total", self.episodes, "games.",
+                f"Last {self.update_rate} games the move distribution was:", printlist)
+                print("Current exploration rate:", round(self.agent._exploration_rate(), 3))  
+                self.moves = [0]*self.action_space
                 avgscore = 0
-
+                torch.save(self.agent.trainer.model, "checkpoints/" + str(self.episodes) + "_" + str(self.max_episodes))
 
         torch.save(self.agent.trainer.model, 'model_'+ datetime.now().strftime("%m_%d_%Y%H_%M_%S"))
         torch.save(self.agent.trainer.model, 'previous_model')
@@ -84,26 +79,20 @@ class Trainer:
         from graphics_module import Graphics
         self.graphics: Graphics = None
         #That's how much I'm gonna bother watching
-        self.game.lifespan = 25
-        for _ in range(100):
+        for _ in range(25):
             if self.graphics is None:
                 self.graphics = Graphics(self.game.mapsize)
             self.run()
             self.game.reset()
 
-trainer = Trainer(load_model = False, load_warmstart_model = False)
+
+hyperparams = Hyperparams()
+hyperparams.set_load_path("previous_model")
+
+trainer = Trainer(hyperparams = hyperparams)
 trainer.main()
 
-"""pos = 0
-neg = 0
-for memory in trainer.agent.bank.memory:
-    if memory.reward == 1.0:
-        pos += 1
-    if memory.reward == -1.0:
-        neg += 1
 
-print("Percentage of apple memories to non apple memories:", (pos/(10000))*100)
-print("Percentage of death memories to non death memories:", (neg/(10000))*100)"""
-input("Ready again?")
+input("Ready again? ")
 from ReplayMemoryGraphic import ReplayGraphics
-graphic = ReplayGraphics(10, trainer.agent.bank, trainer.agent.trainer.model)
+graphic = ReplayGraphics(trainer.game.mapsize, trainer.agent.bank, trainer.agent.trainer.model)

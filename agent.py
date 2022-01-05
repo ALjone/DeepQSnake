@@ -1,43 +1,45 @@
 from typing import List
 import torch
-from memory_bank import Memory, MemoryBank
+from hyperparams import Hyperparams
+from memory_bank import Memory
 from game import Game
 import random as rn
 from trainer import DQTrainer
 from ReplayMemory import ReplayMemory
 
 class DQAgent:
-    def __init__(self, max_episodes: int, load_path: str = None, bank_size: int = 100000) -> None:
+    def __init__(self, hyperparams: Hyperparams) -> None:
         
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.bank: ReplayMemory = ReplayMemory(bank_size)
+        self.action_space = hyperparams.action_space
+        self.device = hyperparams.device
+        self.bank: ReplayMemory = ReplayMemory(hyperparams.replay_size)
         self.testing = False
         self.episodes = 0
-        if load_path is not None:   
-            model = torch.load(load_path)
-            self.trainer: DQTrainer = DQTrainer(model = model)
-        else:
-            self.trainer: DQTrainer = DQTrainer()
+        self.trainer: DQTrainer = DQTrainer(hyperparams)
 
-        #TODO should this be over 1?
-        self.epsilon = 1/(max_episodes*0.9)
+
+        self.epsilon = hyperparams.epsilon
+        self._exploration_rate_start = hyperparams.exploration_rate_start
+        self._exploration_rate_end = hyperparams.exploration_rate_end
+
         self.previous_memory = None
 
     def _exploration_rate(self):
-        return max((0.9-(self.epsilon*self.episodes)), 0.01)
+        return max((self._exploration_rate_start-(self.epsilon*self.episodes)), self._exploration_rate_end)
 
     def get_move(self, game: Game):
-        """True if prediction was made by the model, false if random"""
         if self.testing:
             prediction = self._predict(game)
-            return (True, prediction)
+            return prediction
+
         prediction = self._predict(game)
         if rn.random() < self._exploration_rate():
-            prediction = rn.randint(0, 3)
-            return (False, prediction)
-        return (True, prediction)
+            prediction = rn.randint(0, self.action_space-1)
+
+        return  prediction
 
     def make_memory(self, game: Game, move: int) -> None:
+        #TODO fix to not use memory?
         memory = Memory()
         memory.state = game.get_map()
         memory.action = move
@@ -45,7 +47,7 @@ class DQAgent:
         if self.previous_memory is not None:
 
             self.bank.push(self.previous_memory.state, torch.tensor([self.previous_memory.action]),
-            memory.state if not game.final_state else None, torch.tensor(self._get_reward(game)))
+            memory.state if not game.final_state else None, torch.tensor(game.get_reward()))
 
         self.previous_memory = memory if not game.final_state else None
 
@@ -54,18 +56,6 @@ class DQAgent:
         self.episodes += 1
         self.trainer.model.train()
         self.trainer.train(self.bank)
-
-
-    def _get_reward(self, game: Game) -> float:
-        if game.ate_last_turn:
-            return 1.0
-        if game.dead:
-            return -1.0
-        if game.distToApple() < game.previousAppleDistance:
-            return 0.2
-        if game.distToApple() >= game.previousAppleDistance:
-            return -0.2
-
 
     def _predict(self, game: Game):
         self.trainer.model.eval()

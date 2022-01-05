@@ -1,12 +1,15 @@
 import torch
 
 class SnakeBrain(torch.nn.Module):
-    def __init__(self, output: int):
+    def __init__(self, input_size: int, output: int):
         super(SnakeBrain, self).__init__()
-        self.conv1 = torch.nn.Conv2d(3, 32, 3)
-        self.conv2 = torch.nn.Conv2d(32, 32, 3)
-        self.conv3 = torch.nn.Conv2d(32, 8, 3)
-        self.fc1 = torch.nn.Linear(128, output)
+        self.conv1 = torch.nn.Conv2d(3, 8, 2)
+        self.conv2 = torch.nn.Conv2d(8, 16, 2)
+        self.conv3 = torch.nn.Conv2d(16, 16, 3)
+        self.conv4 = torch.nn.Conv2d(16, 8, 3)
+        conv_output = ((input_size-6)**2)*8
+        self.fc1 = torch.nn.Linear(conv_output, 128)
+        self.fc2 = torch.nn.Linear(128, output)
 
         self.relu = torch.nn.ReLU()        
         
@@ -17,18 +20,9 @@ class SnakeBrain(torch.nn.Module):
         x = self.relu(self.conv1(x))
         x = self.relu(self.conv2(x))
         x = self.relu(self.conv3(x))
+        x = self.relu(self.conv4(x))
         x = torch.flatten(x, 1)
 
-        x = self.fc1(x)
+        x = self.relu(self.fc1(x))
+        x = self.fc2(x)
         return x  
-
-    """def load_model(self, state_dict):
-        with torch.no_grad():
-            self.conv1.weight.copy_(state_dict['conv1.weight'])
-            self.conv1.bias.copy_(state_dict['conv1.bias'])
-            self.conv2.weight.copy_(state_dict['conv2.weight'])
-            self.conv2.bias.copy_(state_dict['conv2.bias'])
-            self.conv3.weight.copy_(state_dict['conv3.weight'])
-            self.conv3.bias.copy_(state_dict['conv3.bias'])
-            self.fc1.weight.copy_(state_dict['fc1.weight'])
-            self.fc1.bias.copy_(state_dict['fc1.bias'])"""

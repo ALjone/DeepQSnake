@@ -25,7 +25,8 @@ class ReplayMemory(object):
         return random.sample(self.memory, batch_size)
 
     def __len__(self):
-        return len(self.memory)"""
+        return len(self.memory)
+        """
 import random
 from collections import namedtuple
 from collections import deque
@@ -44,7 +45,6 @@ class ReplayMemory(object):
         self.away_memory = deque([],maxlen=capacity)
 
     def push(self, *args):
-        """Save a transition"""
         if args[3] == 1.0:
             self.apple_memory.append(Transition(*args))
         elif args[3] == -1.0:

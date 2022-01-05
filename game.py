@@ -22,13 +22,21 @@ class Game:
         #TODO Make this more algorithmically correct
         a = rn.randint(0, self.mapsize-1)
         b = rn.randint(0, self.mapsize-1)
-        while(self.__contains_apple(a, b)):
+        while(not self.__can_place_apple(a, b)):
             a = rn.randint(0, self.mapsize-1)
             b = rn.randint(0, self.mapsize-1)
         self.apple_x = a
         self.apple_y = b
         
-        
+    def get_reward(self) -> float:
+        if self.ate_last_turn:
+            return 1.0
+        if self.dead:
+            return -1.0
+        if self.distToApple() < self.previousAppleDistance:
+            return 0.2
+        if self.distToApple() >= self.previousAppleDistance:
+            return -0.2
 
     def distToApple(self):
         """Returns the distance from the head to the apple"""
@@ -105,6 +113,9 @@ class Game:
 
     def __contains_apple(self, x_pos, y_pos):
         return (x_pos == self.apple_x and y_pos == self.apple_y)
+    
+    def __can_place_apple(self, x_pos, y_pos):
+        return(self.get_map()[0, x_pos, y_pos] == 0 and self.get_map()[1, x_pos, y_pos] == 0)
 
     def __remove_apple(self):
         self.apple_x = None
