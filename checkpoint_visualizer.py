@@ -19,6 +19,8 @@ class Visualizer:
         if hyperparams is None:
             self.hyperparams = Hyperparams()
             self.hyperparams.set_load_path("checkpoints/" + path)
+        else:
+            self.hyperparams = hyperparams
 
         self.game: Game = self.hyperparams.game
                 
@@ -42,7 +44,7 @@ class Visualizer:
         reward = 0
         while(True):
             #Should probably time how long everything takes rather than using a flat 0.1s
-            time.sleep(0.1)
+            #time.sleep(0.01)
             self.graphics.updateWin(self.game, reward)
             move = self.agent.get_move(self.game)
             self.game.do_action(move)

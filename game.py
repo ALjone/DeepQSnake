@@ -33,10 +33,8 @@ class Game:
             return 1.0
         if self.dead:
             return -1.0
-        if self.distToApple() < self.previousAppleDistance:
-            return 0.2
-        if self.distToApple() >= self.previousAppleDistance:
-            return -0.2
+        else:
+            return 0.0
 
     def distToApple(self):
         """Returns the distance from the head to the apple"""

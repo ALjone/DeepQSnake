@@ -6,21 +6,21 @@ class Hyperparams:
     def __init__(self) -> None:
         #trainer
         self.gamma: float = 0.95
-        self.lr: float = 1e-4
-        self.prime_update_rate: int = 10
+        self.lr: float = 1e-3
+        self.prime_update_rate: int = 15
         self.batch_size: int = 64
         self.load_path: str = None
         
         #main
         self.max_episodes: int = 100000
-        self.replay_size: int = 100000
+        self.replay_size: int = 10000
         self.update_rate: int = 1000
         self.test_games: int = 100  
 
         #agent
-        self.exploration_rate_start: float = 0.015
-        self.exploration_rate_end: float =  0.015
-        self.epsilon: float = 1/(self.max_episodes*0.85)
+        self.exploration_rate_start: float = 0.4
+        self.exploration_rate_end: float =  0.02
+        self.epsilon: float = 1/(self.max_episodes*1.8)
         
         #game
         self.size: int = 10

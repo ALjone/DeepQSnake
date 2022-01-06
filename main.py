@@ -24,7 +24,7 @@ class Trainer:
 
         #For visualizing
         self.visualizer = Visualizer()
-        self.hyperparams = Hyperparams
+        self.hyperparams = hyperparams
 
     def plot(self):
         #TODO Expand and crispen up
@@ -33,7 +33,7 @@ class Trainer:
 
     def test(self):
         #Having a function to print is bad, should be fixed
-        #Also make it plot or something
+        #Also make it plot or something 
         score = 0
         self.agent.testing = True
         max_score = 0
@@ -102,6 +102,3 @@ hyperparams.set_load_path("previous_model")
 
 trainer = Trainer(hyperparams = hyperparams)
 trainer.main()
-
-
-
