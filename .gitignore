@@ -1,4 +1,4 @@
 __pycache__/
 model_*
 previous_model
-!/checkpoint/last
+checkpoints/
