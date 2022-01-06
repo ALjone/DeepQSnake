@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from typing import List
 from agent import DQAgent
 import torch
@@ -28,7 +28,8 @@ class Trainer:
 
     def plot(self):
         #TODO Expand and crispen up
-        plt.plot(self.scores)
+        #plt.plot(self.scores)
+        pass
 
     def test(self):
         #Having a function to print is bad, should be fixed
