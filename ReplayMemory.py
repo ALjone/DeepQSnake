@@ -1,43 +1,24 @@
-"""import random
-from collections import namedtuple
-from collections import deque
+#Borrowed from https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 
-Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'reward'))
-
-
-class ReplayMemory(object):
-
-    def __init__(self, capacity):
-        self.memory = deque([],maxlen=capacity)
-
-    def push(self, *args):
-        if args[3] == 1.0:
-            for i in range(20):
-                self.memory.append(Transition(*args))
-        if args[3] == -1.0:
-            for i in range(10):
-                self.memory.append(Transition(*args))
-
-        self.memory.append(Transition(*args))
-
-    def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
-
-    def __len__(self):
-        return len(self.memory)
-        """
 import random
 from collections import namedtuple
 from collections import deque
 from typing import List
 
+class Memory:
+    def __init__(self) -> None:
+        self.state = None
+        self.next_state = None
+        self.reward = None
+        self.action = None
+        self.done = False
+
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
 
 class ReplayMemory(object):
-
+    """The base for this class is copied from """
     def __init__(self, capacity):
         self.apple_memory = deque([],maxlen=capacity)
         self.death_memory = deque([],maxlen=capacity)

@@ -1,11 +1,10 @@
 from typing import List
 import torch
 from hyperparams import Hyperparams
-from memory_bank import Memory
 from game import Game
 import random as rn
-from trainer import DQTrainer
-from ReplayMemory import ReplayMemory
+from network_trainer import DQTrainer
+from ReplayMemory import ReplayMemory, Memory
 
 class DQAgent:
     def __init__(self, hyperparams: Hyperparams) -> None:

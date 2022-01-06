@@ -164,8 +164,10 @@ class Game:
         ate = self.__try_to_eat(x, y)
         self.__move_snake(x_dir, y_dir)
         self.is_game_over()
-        if ate: self._addApple()
         self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
+        if ate: 
+            self._addApple()
+            self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
 
 
     def get_map(self):
