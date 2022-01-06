@@ -27,6 +27,7 @@ class Trainer:
         self.hyperparams = Hyperparams
 
     def plot(self):
+        #TODO Expand and crispen up
         plt.plot(self.scores)
 
     def test(self):

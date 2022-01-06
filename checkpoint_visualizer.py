@@ -1,6 +1,7 @@
 from game import Game
 from agent import DQAgent
 from hyperparams import Hyperparams
+import time
 
 
 
@@ -13,15 +14,15 @@ class Visualizer:
     def load_game(self, path: str = None, hyperparams: Hyperparams = None):
         #TODO Fix path stuff
         if path is None:
-            path = str(input("What is the name of the file in the checkpoint folder? "))
+            path = str(input("What is the name of the file in the checkpoints folder? "))
         
         if hyperparams is None:
             self.hyperparams = Hyperparams()
-            self.hyperparams.set_load_path("checkpoint/" + path)
+            self.hyperparams.set_load_path("checkpoints/" + path)
 
-        self.game: Game = hyperparams.game
+        self.game: Game = self.hyperparams.game
                 
-        self.agent: DQAgent = DQAgent(hyperparams)
+        self.agent: DQAgent = DQAgent(self.hyperparams)
 
         self.game_loaded = True
         
@@ -40,6 +41,8 @@ class Visualizer:
     def __run(self):
         reward = 0
         while(True):
+            #Should probably time how long everything takes rather than using a flat 0.1s
+            time.sleep(0.1)
             self.graphics.updateWin(self.game, reward)
             move = self.agent.get_move(self.game)
             self.game.do_action(move)

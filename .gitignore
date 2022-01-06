@@ -1,4 +1,5 @@
 __pycache__/
 model_*
 previous_model
-checkpoints/
+checkpoints/*
+!checkpoints/last
