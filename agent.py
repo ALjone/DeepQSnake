@@ -15,16 +15,17 @@ class DQAgent:
         self.testing = False
         self.episodes = 0
         self.trainer: DQTrainer = DQTrainer(hyperparams)
+        self.hyperparams = hyperparams
 
-
-        self.epsilon = hyperparams.epsilon
+        self.epsilon = hyperparams.first_epsilon
+        #TODO rename?
         self._exploration_rate_start = hyperparams.exploration_rate_start
         self._exploration_rate_end = hyperparams.exploration_rate_end
 
         self.previous_memory = None
 
     def _exploration_rate(self):
-        return max((self._exploration_rate_start-(self.epsilon*self.episodes)), self._exploration_rate_end)
+        return max(self._exploration_rate_start, self._exploration_rate_end)
 
     def get_move(self, game: Game):
         if self.testing:
@@ -33,6 +34,8 @@ class DQAgent:
 
         prediction = self._predict(game)
         if rn.random() < self._exploration_rate():
+            #TODO Random sampling that can go into a wall, but not tail, at least to start with
+            #TODO and then later not in a wall either.
             prediction = rn.randint(0, self.action_space-1)
 
         return  prediction
@@ -50,12 +53,15 @@ class DQAgent:
 
         self.previous_memory = memory if not game.final_state else None
 
-    def train(self):
-        #Assumes training only ones per game
-        self.episodes += 1
+    def game_is_done(self):
+        """Call this after an episode is finished."""
+        self._exploration_rate_start -= self.epsilon
+        if self._exploration_rate_start < self.hyperparams.epsilon_cutoff:
+            self.epsilon = self.hyperparams.second_epsilon
         self.trainer.model.train()
         self.trainer.train(self.bank)
 
     def _predict(self, game: Game):
+        #TODO should call a method in trainer
         self.trainer.model.eval()
         return torch.argmax(self.trainer.model(game.get_map().to(self.device)))

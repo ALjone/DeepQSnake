@@ -10,6 +10,8 @@ class Game_map:
         return self.__game_map[1, x, y] == 1
 
     def update(self, head, tail, apple_x, apple_y):
+        if torch.sum(self.__game_map[2, :, :] > 1):
+            print("More than one apple????")
         """Resets and updates the position of all the objectives on the map"""
         #Reset map
         self.__game_map: torch.Tensor = torch.zeros(3, self.mapsize, self.mapsize)

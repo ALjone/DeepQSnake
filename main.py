@@ -73,7 +73,7 @@ class Trainer:
 
         while (self.episodes < self.max_episodes):
             self.play_episode()
-            self.agent.train()
+            self.agent.game_is_done()
 
             #TODO save models to a checkpoint folder, and make a script that easily visualizes it
             if self.episodes%self.update_rate == 0 and self.episodes != 0:
@@ -98,7 +98,7 @@ class Trainer:
 
 
 hyperparams = Hyperparams()
-hyperparams.set_load_path("previous_model")
+#hyperparams.set_load_path("previous_model")
 
 trainer = Trainer(hyperparams = hyperparams)
 trainer.main()

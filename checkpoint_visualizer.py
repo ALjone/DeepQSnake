@@ -18,10 +18,11 @@ class Visualizer:
         
         if hyperparams is None:
             self.hyperparams = Hyperparams()
-            self.hyperparams.set_load_path("checkpoints/" + path)
         else:
             self.hyperparams = hyperparams
 
+        self.hyperparams.set_load_path("checkpoints/" + path)
+        
         self.game: Game = self.hyperparams.game
                 
         self.agent: DQAgent = DQAgent(self.hyperparams)
@@ -38,7 +39,10 @@ class Visualizer:
         self.agent.testing = True
         while(True):
             self.__run()
-            self.graphics.win.getKey()
+            try:
+                self.graphics.win.getKey()
+            except:
+                return
 
     def __run(self):
         reward = 0

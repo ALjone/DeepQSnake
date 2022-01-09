@@ -32,12 +32,12 @@ class Graphics:
         game_map = game.get_map()
         for i in range(self.size):
                 for j in range(self.size):
-                    if torch.sum(game_map[:, i, j] == 0):# and self.squares[i][j].config["fill"] != "black":
+                    if self.squares[i][j].config["fill"] != "black" and torch.sum(game_map[:, i, j] == 0) :
                         self.squares[i][j].setFill("black")
-                    if game_map[0, i, j] == 1:# and self.squares[i][j].config["fill"] != "white":
+                    if game_map[0, i, j] == 1 and self.squares[i][j].config["fill"] != "white":
                         self.squares[i][j].setFill("white")
-                    if game_map[1, i, j] == 1:# and self.squares[i][j].config["fill"] != "grey":
+                    if self.squares[i][j].config["fill"] != "grey" and game_map[1, i, j] == 1:
                         self.squares[i][j].setFill("grey")
-                    if game_map[2, i, j] == 1:# and self.squares[i][j].config["fill"] != "red":
+                    if game_map[2, i, j] == 1 and self.squares[i][j].config["fill"] != "red":
                         self.squares[i][j].setFill("red")    
         self.win.update()
