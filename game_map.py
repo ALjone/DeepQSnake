@@ -1,10 +1,11 @@
 import torch
+from torch._C import device
 
 class Game_map:
-    def __init__(self, mapsize) -> None:
+    def __init__(self, mapsize, device) -> None:
         self.mapsize = mapsize
 
-        self.__game_map = torch.zeros(3, self.mapsize, self.mapsize)
+        self.__game_map = torch.zeros(3, self.mapsize, self.mapsize, device = device)
 
     def has_tail(self, x, y):
         return self.__game_map[1, x, y] == 1
@@ -30,3 +31,5 @@ class Game_map:
 
     def get_map(self):
         return self.__game_map
+
+    def reset(self):

@@ -51,8 +51,8 @@ class DQTrainer:
 
         batch: Transition = Transition(*zip(*memories))
 
-        states = torch.stack(batch.state).to(self.device)
-        actions = torch.stack(batch.action).to(self.device)
+        states = torch.stack(batch.state)
+        actions = torch.stack(batch.action)
 
         done_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                           batch.next_state)), device=self.device, dtype=torch.bool)
@@ -60,7 +60,7 @@ class DQTrainer:
         next_states = torch.stack([s for s in batch.next_state
                                                 if s is not None])
         
-        rewards = torch.stack(batch.reward).to(self.device)
+        rewards = torch.stack(batch.reward)
 
         predictions = self.model(states).gather(1, actions)
 
@@ -77,7 +77,7 @@ class DQTrainer:
         with torch.no_grad():
             self.future_model.eval()
             #Flip done because false = 0, and we want to remove it where it is 1
-            future_values = torch.zeros(done_mask.shape[0], device=self.device)
+            future_values = torch.zeros(done_mask.shape[0])
             future_values[done_mask] = self.future_model(next_states).max(1)[0].detach()
             targets = rewards + (future_values * self.gamma)
         #TODO used to say rewards, which is same as setting gamma to 0

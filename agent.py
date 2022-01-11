@@ -11,7 +11,6 @@ class DQAgent:
     def __init__(self, hyperparams: Hyperparams) -> None:
         
         self.action_space = hyperparams.action_space
-        self.device = hyperparams.device
         self.bank: ReplayMemory = ReplayMemory(hyperparams.replay_size)
         self.testing = False
         self.episodes = 0
@@ -75,4 +74,4 @@ class DQAgent:
     def _predict(self):
         #TODO should call a method in trainer
         self.trainer.model.eval()
-        return torch.argmax(self.trainer.model(self.__get_features().to(self.device)))
+        return torch.argmax(self.trainer.model(self.__get_features()))
