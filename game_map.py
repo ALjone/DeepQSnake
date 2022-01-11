@@ -33,3 +33,4 @@ class Game_map:
         return self.__game_map
 
     def reset(self):
+        self.__game_map = torch.zeros(3, self.mapsize, self.mapsize, device = device)

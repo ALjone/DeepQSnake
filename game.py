@@ -49,7 +49,7 @@ class Game:
         self.apple_y: int = None
 
         #3 LAYERS, FIRST IS HEAD, SECOND IS TAIL, THIRD IS APPLES
-        self.__game_map: Game_map = Game_map(self.mapsize)
+        self.__game_map.reset()
 
         #Set head and tail
         head: Tail = Tail(rn.randint(1, self.mapsize-2), rn.randint(1, self.mapsize-2), None)
