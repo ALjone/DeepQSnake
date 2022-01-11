@@ -51,14 +51,14 @@ class DQTrainer:
 
         batch: Transition = Transition(*zip(*memories))
 
-        states = torch.stack(batch.state)
+        states = torch.stack(batch.state).to(self.device)
         actions = torch.stack(batch.action)
 
         done_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                          batch.next_state)), device=self.device, dtype=torch.bool)
+                                          batch.next_state)), dtype=torch.bool)
 
         next_states = torch.stack([s for s in batch.next_state
-                                                if s is not None])
+                                                if s is not None]).to(self.device)
         
         rewards = torch.stack(batch.reward)
 

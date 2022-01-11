@@ -50,7 +50,7 @@ class Visualizer:
             #Should probably time how long everything takes rather than using a flat 0.1s
             #time.sleep(0.01)
             self.graphics.updateWin(self.game, reward)
-            move = self.agent.get_move(self.game)
+            move = self.agent.get_move()
             self.game.do_action(move)
             reward += self.game.get_reward()
 

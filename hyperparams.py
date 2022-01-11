@@ -24,14 +24,15 @@ class Hyperparams:
         self.first_epsilon: float = 1/(self.max_episodes*0.5)
         self.second_epsilon: float = 1/(self.max_episodes*0.9)
         self.epsilon_cutoff = 1 #0.3 for the future
-        
-        self.device: torch.DeviceObjType = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         #game
         self.size: int = 10
         self.lifespan: int = 100
-        self.game: Game = Game(self.size, self.lifespan, self.device)
+        self.game: Game = Game(self.size, self.lifespan)
         self.action_space = 4
+
+        
+        self.device: torch.DeviceObjType = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
     def set_load_path(self, load_path: str) -> None:

@@ -11,12 +11,12 @@ class Tail:
         self.next: Tail = next
 
 class Game:
-    def __init__(self, size, lifespan, device):
+    def __init__(self, size, lifespan):
         """Initializes the game with the correct size and lifespan, and puts a head in the middle, as well as an apple randomly on the map"""
         self.mapsize: int = size
         self.lifespan: int = lifespan
-        self.reset()
-        self.__game_map: Game_map = Game_map(self.mapsize, device)
+        self.__game_map: Game_map = Game_map(self.mapsize)
+        self.reset()    
     
     def _addApple(self):
         """Adds and apple to the map at a random legal position"""
