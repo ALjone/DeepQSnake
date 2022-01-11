@@ -1,3 +1,4 @@
+from collections import deque
 from typing import List
 import torch
 from hyperparams import Hyperparams
@@ -16,6 +17,7 @@ class DQAgent:
         self.episodes = 0
         self.trainer: DQTrainer = DQTrainer(hyperparams)
         self.hyperparams = hyperparams
+        self.game = hyperparams.game
 
         self.epsilon = hyperparams.first_epsilon
         #TODO rename?
@@ -23,16 +25,17 @@ class DQAgent:
         self._exploration_rate_end = hyperparams.exploration_rate_end
 
         self.previous_memory = None
+        self.previous_state = None
 
     def _exploration_rate(self):
         return max(self._exploration_rate_start, self._exploration_rate_end)
 
-    def get_move(self, game: Game):
+    def get_move(self):
         if self.testing:
-            prediction = self._predict(game)
+            prediction = self._predict()
             return prediction
 
-        prediction = self._predict(game)
+        prediction = self._predict()
         if rn.random() < self._exploration_rate():
             #TODO Random sampling that can go into a wall, but not tail, at least to start with
             #TODO and then later not in a wall either.
@@ -40,18 +43,20 @@ class DQAgent:
 
         return  prediction
 
-    def make_memory(self, game: Game, move: int) -> None:
+    def make_memory(self, move: int) -> None:
         #TODO fix to not use memory?
+        #TODO Rename to end of turn?
         memory = Memory()
-        memory.state = game.get_map()
+        memory.state = self.__get_features()
         memory.action = move
 
         if self.previous_memory is not None:
 
             self.bank.push(self.previous_memory.state, torch.tensor([self.previous_memory.action]),
-            memory.state if not game.final_state else None, torch.tensor(game.get_reward()))
+            memory.state if not self.game.final_state else None, torch.tensor(self.game.get_reward()))
 
-        self.previous_memory = memory if not game.final_state else None
+        self.previous_memory = memory if not self.game.final_state else None
+        self.previous_state = self.game.get_map() if not self.game.final_state else None
 
     def game_is_done(self):
         """Call this after an episode is finished."""
@@ -61,7 +66,13 @@ class DQAgent:
         self.trainer.model.train()
         self.trainer.train(self.bank)
 
-    def _predict(self, game: Game):
+    def __get_features(self):
+        if self.hyperparams.frame_stacks == 2:
+            return torch.cat((self.game.get_map(), self.previous_state if self.previous_state is not None else self.game.get_map()), dim = 0)
+        return self.game.get_map()
+
+
+    def _predict(self):
         #TODO should call a method in trainer
         self.trainer.model.eval()
-        return torch.argmax(self.trainer.model(game.get_map().to(self.device)))
+        return torch.argmax(self.trainer.model(self.__get_features().to(self.device)))

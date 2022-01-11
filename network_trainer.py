@@ -7,14 +7,14 @@ from model import SnakeBrain
 
 class DQTrainer:
     def __init__(self, hyperparams: Hyperparams) -> None:
-        self.model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space) if hyperparams.load_path is None else torch.load(hyperparams.load_path)
+        self.model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space, hyperparams.frame_stacks) if hyperparams.load_path is None else torch.load(hyperparams.load_path)
         #Try high
         self.gamma: float = hyperparams.gamma
         self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=hyperparams.lr)
 
         self.device = hyperparams.device
 
-        self.future_model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space)
+        self.future_model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space, hyperparams.frame_stacks)
         self.future_model.load_state_dict(self.model.state_dict())
 
         self.model.to(self.device)

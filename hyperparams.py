@@ -8,11 +8,12 @@ class Hyperparams:
         self.gamma: float = 0.9 #TRY HIGH AT SOME POINT
         self.lr: float = 1e-3
         self.prime_update_rate: int = 15
-        self.batch_size: int = 64
+        self.batch_size: int = 128
         self.load_path: str = None
+        self.frame_stacks = 2 #Max 2 as of now
         
         #main
-        self.max_episodes: int = 300000
+        self.max_episodes: int = 100000
         self.replay_size: int = 10000
         self.update_rate: int = 1000
         self.test_games: int = 100  
@@ -21,11 +22,11 @@ class Hyperparams:
         self.exploration_rate_start: float = 0.95
         self.exploration_rate_end: float =  0.02
         self.first_epsilon: float = 1/(self.max_episodes*0.5)
-        self.second_epsilon: float = 1/(self.max_episodes*0.8)
+        self.second_epsilon: float = 1/(self.max_episodes*0.9)
         self.epsilon_cutoff = 1 #0.3 for the future
         
         #game
-        self.size: int = 15
+        self.size: int = 10
         self.lifespan: int = 100
         self.game: Game = Game(self.size, self.lifespan)
         self.action_space = 4
