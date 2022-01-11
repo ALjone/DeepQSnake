@@ -72,6 +72,4 @@ class DQAgent:
 
 
     def _predict(self):
-        #TODO should call a method in trainer
-        self.trainer.model.eval()
-        return torch.argmax(self.trainer.model(self.__get_features()))
+        return self.trainer.predict(self.__get_features())

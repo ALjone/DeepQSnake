@@ -26,6 +26,12 @@ class DQTrainer:
         self.episodes: int = 0
         self.batch_size = hyperparams.batch_size
 
+    def predict(self, features):
+        features = features.to(self.device)
+        self.model.eval()
+        return torch.argmax(self.model(features))
+
+
 
 
     def train(self, bank: ReplayMemory, print_ = False) -> None:
