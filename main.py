@@ -93,7 +93,7 @@ class Trainer:
                 elapsed_time = time.time()-start_time
                 print(f"Trained another {self.update_rate} games with exploration rate {round(self.agent._exploration_rate(), 3)}. At {int(self.episodes/1000)}k/{int(self.max_episodes/1000)}k games played. ETA: {self.formate_time(int((elapsed_time/(self.episodes/self.max_episodes))-elapsed_time))}")
                 self.test()
-                torch.save(self.agent.trainer.model, "checkpoints/" + str(self.episodes) + "_" + str(self.max_episodes))
+                #torch.save(self.agent.trainer.model, "checkpoints/" + str(self.episodes) + "_" + str(self.max_episodes))
 
         torch.save(self.agent.trainer.model, "checkpoints/last") #For easily getting it
         torch.save(self.agent.trainer.model, 'model_'+ datetime.now().strftime("%m_%d_%Y%H_%M_%S"))

@@ -19,14 +19,17 @@ Transition = namedtuple('Transition',
 
 class ReplayMemory(object):
     """The base for this class is copied from """
-    def __init__(self, capacity):
+    def __init__(self, capacity, apple_reward, death_reward):
         self.apple_memory = deque([],maxlen=capacity)
         self.death_memory = deque([],maxlen=capacity)
         self.other_memory = deque([], maxlen=capacity*2)
+        self.apple_reward = apple_reward
+        self.death_reward = death_reward
+
     def push(self, *args):
-        if args[3] == 1.0:
+        if args[3] == self.apple_reward:
             self.apple_memory.append(Transition(*args))
-        elif args[3] == -1.0:
+        elif args[3] == self.death_reward:
             self.death_memory.append(Transition(*args))
         else:
             self.other_memory.append(Transition(*args))

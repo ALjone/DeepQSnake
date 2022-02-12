@@ -3,7 +3,7 @@ from ReplayMemory import ReplayMemory, Transition
 import torch
 from hyperparams import Hyperparams
 from model import SnakeBrain
-
+import random as rn
 
 class DQTrainer:
     def __init__(self, hyperparams: Hyperparams) -> None:
@@ -31,7 +31,13 @@ class DQTrainer:
         self.model.eval()
         return torch.argmax(self.model(features))
 
-
+    def random(self, features, top_x):
+        features = features.to(self.device)
+        self.model.eval()
+        preds = self.model(features)
+        move = rn.randint(0, top_x-1)
+        return torch.argsort(torch.max(preds, axis=0)[0])[-move]
+        
 
 
     def train(self, bank: ReplayMemory, print_ = False) -> None:

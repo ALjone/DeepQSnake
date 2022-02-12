@@ -1,8 +1,6 @@
-from collections import deque
 from typing import List
 import torch
 from hyperparams import Hyperparams
-from game import Game
 import random as rn
 from network_trainer import DQTrainer
 from ReplayMemory import ReplayMemory, Memory
@@ -11,13 +9,14 @@ class DQAgent:
     def __init__(self, hyperparams: Hyperparams) -> None:
         
         self.action_space = hyperparams.action_space
-        self.bank: ReplayMemory = ReplayMemory(hyperparams.replay_size)
+        self.bank: ReplayMemory = ReplayMemory(hyperparams.replay_size, hyperparams.apple_reward, hyperparams.death_reward)
         self.testing = False
         self.episodes = 0
         self.trainer: DQTrainer = DQTrainer(hyperparams)
         self.hyperparams = hyperparams
         self.game = hyperparams.game
-
+        
+        self.top_k = hyperparams.top_k
         self.epsilon = hyperparams.first_epsilon
         #TODO rename?
         self._exploration_rate_start = hyperparams.exploration_rate_start
@@ -38,9 +37,9 @@ class DQAgent:
         if rn.random() < self._exploration_rate():
             #TODO Random sampling that can go into a wall, but not tail, at least to start with
             #TODO and then later not in a wall either.
-            prediction = rn.randint(0, self.action_space-1)
+            prediction = self._get_random(self.top_k)
 
-        return  prediction
+        return prediction
 
     def make_memory(self, move: int) -> None:
         #TODO fix to not use memory?
@@ -62,6 +61,10 @@ class DQAgent:
         self._exploration_rate_start -= self.epsilon
         if self._exploration_rate_start < self.hyperparams.epsilon_cutoff:
             self.epsilon = self.hyperparams.second_epsilon
+        if self.episodes > self.hyperparams.lower_limit_1:
+            self.top_k = self.hyperparams.top_k - 1
+        if self.episodes > self.hyperparams.lower_limit_2:
+            self.top_k = self.hyperparams.top_k - 2
         self.trainer.model.train()
         self.trainer.train(self.bank)
 
@@ -73,3 +76,6 @@ class DQAgent:
 
     def _predict(self):
         return self.trainer.predict(self.__get_features())
+
+    def _get_random(self, top_x):
+        return self.trainer.random(self.__get_features(), top_x)

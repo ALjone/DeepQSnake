@@ -13,24 +13,29 @@ class Hyperparams:
         self.frame_stacks = 2 #Max 2 as of now
         
         #main
-        self.max_episodes: int = 100000
+        self.max_episodes: int = 1000000
         self.replay_size: int = 10000
         self.update_rate: int = 1000
         self.test_games: int = 100  
 
         #agent
-        self.exploration_rate_start: float = 0.95
-        self.exploration_rate_end: float =  0.02
-        self.first_epsilon: float = 1/(self.max_episodes*0.5)
+        self.top_k = 4
+        self.lower_limit_1 = int(self.max_episodes/3)
+        self.lower_limit_2 = int(2*(self.max_episodes/3))
+
+        self.exploration_rate_start: float = 1 #Try 0.5
+        self.exploration_rate_end: float =  0.01 #Try 0.01
+        self.first_epsilon: float = 1/(self.max_episodes*0.4)
         self.second_epsilon: float = 1/(self.max_episodes*0.9)
-        self.epsilon_cutoff = 1 #0.3 for the future
+        self.epsilon_cutoff = 0.4 #0.3 for the future
 
         #game
         self.size: int = 10
-        self.lifespan: int = 100
-        self.game: Game = Game(self.size, self.lifespan)
+        self.lifespan: int = 50
+        self.apple_reward = 2.0
+        self.death_reward = -4.0
+        self.game: Game = Game(self.size, self.lifespan, self.apple_reward, self.death_reward)
         self.action_space = 4
-
         
         self.device: torch.DeviceObjType = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

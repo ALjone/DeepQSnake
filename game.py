@@ -11,11 +11,13 @@ class Tail:
         self.next: Tail = next
 
 class Game:
-    def __init__(self, size, lifespan):
+    def __init__(self, size, lifespan, apple_reward, death_reward):
         """Initializes the game with the correct size and lifespan, and puts a head in the middle, as well as an apple randomly on the map"""
         self.mapsize: int = size
         self.lifespan: int = lifespan
         self.__game_map: Game_map = Game_map(self.mapsize)
+        self.apple_reward = apple_reward
+        self.death_reward = death_reward
         self.reset()    
     
     def _addApple(self):
@@ -31,9 +33,9 @@ class Game:
         
     def get_reward(self) -> float:
         if self.ate_last_turn:
-            return 1.0
+            return self.apple_reward
         if self.dead:
-            return -1.0
+            return self.death_reward
         else:
             return 0.0
 
