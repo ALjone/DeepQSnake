@@ -45,17 +45,18 @@ class Visualizer:
                 return
 
     def __run(self):
-        reward = 0
+        total_reward = 0
+        state = self.game.reset()
         while(True):
             #Should probably time how long everything takes rather than using a flat 0.1s
-            #time.sleep(0.01)
-            self.graphics.updateWin(self.game, reward)
-            move = self.agent.get_move()
-            self.game.do_action(move)
-            reward += self.game.get_reward()
+            time.sleep(0.05)
+            self.graphics.updateWin(self.game, total_reward)
+            move = self.agent.get_move(state)
+            state, reward, done = self.game.do_action(move)
+            total_reward += reward
 
 
-            if(self.game.final_state):
-                self.graphics.updateWin(self.game, reward)
+            if(done):
+                self.graphics.updateWin(self.game, total_reward)
                 self.game.reset()
                 break

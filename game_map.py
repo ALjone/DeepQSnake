@@ -1,21 +1,20 @@
-import torch
-from torch._C import device
+import numpy as np
 
 class Game_map:
     def __init__(self, mapsize) -> None:
         self.mapsize = mapsize
 
-        self.__game_map = torch.zeros(3, self.mapsize, self.mapsize)
+        self.reset()
 
     def has_tail(self, x, y):
         return self.__game_map[1, x, y] == 1
 
     def update(self, head, tail, apple_x, apple_y):
-        if torch.sum(self.__game_map[2, :, :] > 1):
-            print("More than one apple????")
+        #if np.sum(self.__game_map[2, :, :] > 1):
+        #    print("More than one apple????")
         """Resets and updates the position of all the objectives on the map"""
         #Reset map
-        self.__game_map: torch.Tensor = torch.zeros(3, self.mapsize, self.mapsize)
+        self.reset()
 
         #Add head
         self.__game_map[0, head.x_pos, head.y_pos] = 1
@@ -33,4 +32,4 @@ class Game_map:
         return self.__game_map
 
     def reset(self):
-        self.__game_map = torch.zeros(3, self.mapsize, self.mapsize)
+        self.__game_map = np.zeros((3, self.mapsize, self.mapsize))

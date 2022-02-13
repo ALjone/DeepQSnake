@@ -1,0 +1,17 @@
+To do:
+
+LIVE PLOTTING, WITH DISTRIBUTION OF APPLES
+
+Rewrite checkpoints to just save a the model of a training session along with its hyperparameter file (pickle?)
+Comment and clean up code
+Try different hyperparams such as batch size
+Try even deeper architectures + different things like batch norm and max pooling perhaps.
+Fix plotting and other statistics (std maybe)
+Some games no random moves, some games higher rate of random moves, or only do random moves after x moves in a game
+Second best move sometimes, rather than random move
+Make multi-agent setup
+Try same setup with different games
+Better graphics engine
+Input to linear layers that says something about whether or not that state has already been visited
+
+Saves the plots 

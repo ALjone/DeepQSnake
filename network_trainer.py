@@ -59,7 +59,7 @@ class DQTrainer:
 
 
     def _train_batch(self, memories: List[Transition]):
-        self.model.zero_grad()
+        self.optim.zero_grad()
 
         batch: Transition = Transition(*zip(*memories))
 
@@ -80,7 +80,6 @@ class DQTrainer:
 
         loss = self.loss(predictions, targets.unsqueeze(1))
         
-        self.optim.zero_grad()
         loss.backward()
         self.optim.step()
         return loss

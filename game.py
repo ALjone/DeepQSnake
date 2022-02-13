@@ -1,7 +1,7 @@
 import math
 import random as rn
-from typing import List
-import torch
+from typing import List, Tuple
+import numpy as np
 from game_map import Game_map
 
 class Tail:
@@ -31,7 +31,7 @@ class Game:
         self.apple_x = a
         self.apple_y = b
         
-    def get_reward(self) -> float:
+    def __get_reward(self) -> float:
         if self.ate_last_turn:
             return self.apple_reward
         if self.dead:
@@ -45,7 +45,7 @@ class Game:
         y = abs(self.apple_y-self.head.y_pos) ** 2
         return math.sqrt(x + y)
 
-    def reset(self) -> None:
+    def reset(self) -> np.ndarray:
         """Resets the game, making it a fresh instance with no memory of previous happenings"""
         self.apple_x: int = None
         self.apple_y: int = None
@@ -72,10 +72,12 @@ class Game:
         self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
         self.previousAppleDistance: float = self.distToApple()
 
+        return self._get_map()
+
     def __can_move(self, x, y):
         return (0 <= x < self.mapsize) and (0 <= y < self.mapsize and not self.__game_map.has_tail(x, y))
         
-    def is_game_over(self):
+    def __is_game_over(self):
         """Check if either the snake is out of bounds, hasn't eaten enough, or ate itself."""
         x = self.head.x_pos
         y = self.head.y_pos
@@ -95,7 +97,7 @@ class Game:
 
         return self.dead + self.final_state
 
-    def do_action(self, action):
+    def do_action(self, action) -> Tuple[np.ndarray, float, bool]:
         """Completes the given action and returns the new map"""
         self.ate_last_turn = False
         if(action == 0):
@@ -110,13 +112,13 @@ class Game:
         if(action == 3):
             #North?
             self.__move(0, 1)
-        return self.__game_map
+        return self._get_map(), self.__get_reward(), self.__is_game_over()
 
     def __contains_apple(self, x_pos, y_pos):
         return (x_pos == self.apple_x and y_pos == self.apple_y)
     
     def __can_place_apple(self, x_pos, y_pos):
-        return(self.get_map()[0, x_pos, y_pos] == 0 and self.get_map()[1, x_pos, y_pos] == 0)
+        return(self._get_map()[0, x_pos, y_pos] == 0 and self._get_map()[1, x_pos, y_pos] == 0)
 
     def __remove_apple(self):
         self.apple_x = None
@@ -164,12 +166,12 @@ class Game:
         
         ate = self.__try_to_eat(x, y)
         self.__move_snake(x_dir, y_dir)
-        self.is_game_over()
+        self.__is_game_over()
         self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
         if ate: 
             self._addApple()
             self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
 
 
-    def get_map(self):
+    def _get_map(self):
         return self.__game_map.get_map()

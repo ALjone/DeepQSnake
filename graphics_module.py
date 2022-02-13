@@ -1,6 +1,6 @@
 from game import Game
 import graphics
-import torch
+import numpy as np
 
 class Graphics:
     def __init__(self, size):
@@ -29,10 +29,10 @@ class Graphics:
         self.hunger.setText("Hunger: " + str(game.moves_since_ate))
         self.reward.setText("Reward: " + str(round(reward, 1)))
         self.dead.setText("Dead: True" if game.dead else "Dead: False")
-        game_map = game.get_map()
+        game_map = game._get_map()
         for i in range(self.size):
                 for j in range(self.size):
-                    if self.squares[i][j].config["fill"] != "black" and torch.sum(game_map[:, i, j] == 0) :
+                    if self.squares[i][j].config["fill"] != "black" and np.sum(game_map[:, i, j] == 0) :
                         self.squares[i][j].setFill("black")
                     if game_map[0, i, j] == 1 and self.squares[i][j].config["fill"] != "white":
                         self.squares[i][j].setFill("white")
