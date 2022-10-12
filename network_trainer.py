@@ -3,7 +3,7 @@ from ReplayMemory import ReplayMemory, Transition
 import torch
 from hyperparams import Hyperparams
 from model import SnakeBrain
-import random as rn
+import numpy as np
 
 class DQTrainer:
     def __init__(self, hyperparams: Hyperparams) -> None:
@@ -13,6 +13,8 @@ class DQTrainer:
         self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=hyperparams.lr)
 
         self.device = hyperparams.device
+
+        self.action_space = hyperparams.action_space
 
         self.future_model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space, hyperparams.frame_stacks)
         self.future_model.load_state_dict(self.model.state_dict())
@@ -26,20 +28,18 @@ class DQTrainer:
         self.episodes: int = 0
         self.batch_size = hyperparams.batch_size
 
-    def predict(self, features):
+    def predict(self, features: torch.Tensor, valid_moves: torch.Tensor):
         features = features.to(self.device)
         self.model.eval()
-        return torch.argmax(self.model(features))
+        pred = self.model(features)
+        #https://discuss.pytorch.org/t/masked-argmax-in-pytorch/105341
+        large = torch.finfo (pred.dtype).max
+        return (pred - large * (1 - valid_moves) - large * (1 - valid_moves)).argmax().item()
 
-    def random(self, features, top_x):
-        features = features.to(self.device)
-        self.model.eval()
-        preds = self.model(features)
-        move = rn.randint(0, top_x-1)
-        return torch.argsort(torch.max(preds, axis=0)[0])[-move]
-        
-
-
+    def random(self, valid_moves: torch.Tensor):
+        max_inds, = torch.where(valid_moves == valid_moves.max())
+        return np.random.choice(max_inds).item()
+    
     def train(self, bank: ReplayMemory, print_ = False) -> None:
         if len(bank) < self.batch_size:
             return
@@ -64,7 +64,7 @@ class DQTrainer:
         batch: Transition = Transition(*zip(*memories))
 
         states = torch.stack(batch.state).to(self.device)
-        actions = torch.stack(batch.action)
+        actions = torch.stack(batch.action).to(self.device)
 
         done_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                           batch.next_state)), dtype=torch.bool)

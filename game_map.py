@@ -7,29 +7,34 @@ class Game_map:
         self.reset()
 
     def has_tail(self, x, y):
-        return self.__game_map[1, x, y] == 1
-
-    def update(self, head, tail, apple_x, apple_y):
-        #if np.sum(self.__game_map[2, :, :] > 1):
-        #    print("More than one apple????")
+        return 0 < self.game_map[1, x, y] < 1
+    
+    def update(self, snake, apples):
         """Resets and updates the position of all the objectives on the map"""
         #Reset map
         self.reset()
 
         #Add head
-        self.__game_map[0, head.x_pos, head.y_pos] = 1
+
+        self.game_map[0, snake[0, 0], snake[0, 1]] = 1 
+        self.possible_apple_pos_map[snake[0, 0], snake[0, 1]] = 1
 
         #Add tail
-        while (tail.next != None):
-            self.__game_map[1, tail.x_pos, tail.y_pos] = 1
-            tail = tail.next
+        for i, tail in enumerate(reversed(snake[1:])):
+            self.game_map[1, tail[0], tail[1]] = (i+1)/(len(snake))
+            self.possible_apple_pos_map[tail[0], tail[1]] = 1
 
         #Add apple
-        if apple_x is not None and apple_y is not None:
-            self.__game_map[2, apple_x, apple_y] = 1
+
+        #Fix this
+        for apple_x, apple_y in apples:
+            if apple_x is None or apple_y is None:
+                continue
+            self.game_map[2, apple_x, apple_y] = 1
 
     def get_map(self):
-        return self.__game_map
+        return self.game_map
 
     def reset(self):
-        self.__game_map = np.zeros((3, self.mapsize, self.mapsize))
+        self.game_map = np.zeros((3, self.mapsize, self.mapsize))
+        self.possible_apple_pos_map = np.zeros((self.mapsize, self.mapsize), dtype = np.int)

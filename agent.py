@@ -15,63 +15,47 @@ class DQAgent:
         self.trainer: DQTrainer = DQTrainer(hyperparams)
         self.hyperparams: Hyperparams = hyperparams
         
-        self.top_k: int = hyperparams.top_k
-        self.epsilon: float = hyperparams.first_epsilon
+        self.epsilon: float = hyperparams.epsilon
 
         self._exploration_rate_curr: float = hyperparams.exploration_rate_start
         self._exploration_rate_end: float = hyperparams.exploration_rate_end
 
-        self.previous_memory: bool = None
         self.previous_state: torch.Tensor = None
 
     def _exploration_rate(self) -> float:
         """Returns the exploration rate at this point in the training process"""
         return max(self._exploration_rate_curr, self._exploration_rate_end)
 
-    def get_move(self, state: np.ndarray) -> int:
+    def get_move(self, state: np.ndarray, valid_moves: np.ndarray) -> int:
+        if np.sum(valid_moves) in [0, 1]:
+            return np.argmax(valid_moves)
         state = torch.from_numpy(state)
+        valid_moves = torch.from_numpy(valid_moves)
         if self.testing:
-            prediction = self._predict(state)
+            prediction = self._predict(state, valid_moves)
             return prediction
 
-        prediction = self._predict(state)
+        
         if rn.random() < self._exploration_rate():
             #TODO Random sampling that can go into a wall, but not tail, at least to start with
             #TODO and then later not in a wall either.
-            prediction = self._get_random(self.top_k, state)
+            return self._get_random(valid_moves)
 
-        return prediction
+        return self._predict(state, valid_moves)
 
     def make_memory(self, action: int, state: np.ndarray, next_state: np.ndarray, reward: float, done: bool) -> None:
         #TODO fix to not use memory?
         #TODO Rename to end of turn?
         state = torch.from_numpy(state)
         next_state = torch.from_numpy(next_state)
-        """memory = Memory()
-        memory.state = self.__get_features(state)
-        memory.action = action
-        memory.reward = reward
-        memory.next_state = next_state"""
         #TODO currently doesn't work with stack
-        self.bank.push(self.__get_features(state), torch.tensor([action]), self.__get_features(next_state) if not done else None, torch.tensor(reward))
-        """
-        if self.previous_memory is not None:
+        self.bank.push(self.__get_features(state), torch.tensor([action]), self.__get_features(next_state) if not done else None, torch.tensor(reward), done)
 
-            self.bank.push(self.previous_memory.state, torch.tensor([self.previous_memory.action]),
-            memory.state if not done else None, torch.tensor(reward))
-
-        self.previous_memory = memory if not done else None"""
         self.previous_state = state if not done else None
 
     def game_is_done(self):
         """Call this after an episode is finished."""
         self._exploration_rate_curr -= self.epsilon
-        if self._exploration_rate_curr < self.hyperparams.epsilon_cutoff:
-            self.epsilon = self.hyperparams.second_epsilon
-        if self.episodes > self.hyperparams.lower_limit_1:
-            self.top_k = self.hyperparams.top_k - 1
-        if self.episodes > self.hyperparams.lower_limit_2:
-            self.top_k = self.hyperparams.top_k - 2
         self.trainer.train(self.bank)
 
     def __get_features(self, state: torch.Tensor):
@@ -80,8 +64,8 @@ class DQAgent:
         return state
 
 
-    def _predict(self, state: torch.Tensor):
-        return self.trainer.predict(self.__get_features(state))
+    def _predict(self, state: torch.Tensor, valid_moves: torch.Tensor):
+        return self.trainer.predict(self.__get_features(state), valid_moves)
 
-    def _get_random(self, top_x: int, state: torch.Tensor):
-        return self.trainer.random(self.__get_features(state), top_x)
+    def _get_random(self, valid_moves: torch.Tensor):
+        return self.trainer.random(valid_moves)

@@ -1,51 +1,46 @@
-import math
 import random as rn
-from typing import List, Tuple
+from typing import Tuple
 import numpy as np
 from game_map import Game_map
+from collections import deque
 
-class Tail:
-    def __init__(self, x_pos, y_pos, next):    
-        self.x_pos: int = x_pos
-        self.y_pos: int = y_pos
-        self.next: Tail = next
+#TODO: This makes checkpoints while testing
+
+reverse = {0: 1, 1: 0, 2: 3, 3: 2}
 
 class Game:
-    def __init__(self, size, lifespan, apple_reward, death_reward):
+    def __init__(self, size, lifespan, apple_reward, death_reward, checkpoint_timestamps, checkpoint_length, checkpoint_probability):
         """Initializes the game with the correct size and lifespan, and puts a head in the middle, as well as an apple randomly on the map"""
         self.mapsize: int = size
+        self.size: int = size**2
         self.lifespan: int = lifespan
         self.__game_map: Game_map = Game_map(self.mapsize)
         self.apple_reward = apple_reward
         self.death_reward = death_reward
+        self.death_penalty = 0
+        self.checkpoint_timestamps = checkpoint_timestamps
+        self.checkpoints = deque([],maxlen=checkpoint_length)
+        self.checkpoint_probability = checkpoint_probability
         self.reset()    
     
     def _addApple(self):
         """Adds and apple to the map at a random legal position"""
-        #TODO Make this more algorithmically correct
-        a = rn.randint(0, self.mapsize-1)
-        b = rn.randint(0, self.mapsize-1)
-        while(not self.__can_place_apple(a, b)):
-            a = rn.randint(0, self.mapsize-1)
-            b = rn.randint(0, self.mapsize-1)
-        self.apple_x = a
-        self.apple_y = b
+        #NOTE: Might be sort of a little bit bugged here, given that 
+        true_idx = np.argwhere(self.__game_map.possible_apple_pos_map == 0)
+        random_idx = np.random.randint(len(true_idx), size=1)
+        random_index = true_idx[random_idx][0]
+        self.apple_x = random_index[0]
+        self.apple_y = random_index[1]
         
     def __get_reward(self) -> float:
         if self.ate_last_turn:
             return self.apple_reward
         if self.dead:
-            return self.death_reward
+            return self.death_penalty
         else:
             return 0.0
 
-    def distToApple(self):
-        """Returns the distance from the head to the apple"""
-        x = abs(self.apple_x-self.head.x_pos) ** 2
-        y = abs(self.apple_y-self.head.y_pos) ** 2
-        return math.sqrt(x + y)
-
-    def reset(self) -> np.ndarray:
+    def reset(self, test = False) -> np.ndarray:
         """Resets the game, making it a fresh instance with no memory of previous happenings"""
         self.apple_x: int = None
         self.apple_y: int = None
@@ -54,10 +49,9 @@ class Game:
         self.__game_map.reset()
 
         #Set head and tail
-        head: Tail = Tail(rn.randint(1, self.mapsize-2), rn.randint(1, self.mapsize-2), None)
-        self.tail: Tail = head
-        self.head: Tail = head
-        self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
+        self.snake = np.zeros((self.mapsize**2, 2), dtype = np.int8)
+        self.snake[0, :] = [self.mapsize//2, self.mapsize//2]    
+        self.snake_length = 1
 
         #Set variables
         self.moves_since_ate: int = 0
@@ -67,33 +61,52 @@ class Game:
         self.final_state: bool = False
         self.ate_last_turn: bool = False
 
+        if rn.random() < self.checkpoint_probability and len(self.checkpoints) > 0 and not test:
+            self.snake = rn.sample(self.checkpoints, 1)[0]
+
         #Add apple
+        self.__game_map.update(self.snake[:self.snake_length], [(self.apple_x, self.apple_y)])
         self._addApple()
-        self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
-        self.previousAppleDistance: float = self.distToApple()
+        self.__game_map.update(self.snake[:self.snake_length], [(self.apple_x, self.apple_y)])
 
         return self._get_map()
 
     def __can_move(self, x, y):
         return (0 <= x < self.mapsize) and (0 <= y < self.mapsize and not self.__game_map.has_tail(x, y))
+
+    def valid_moves(self):
+        x = self.snake[0, 0]
+        y = self.snake[0, 1]
+        valid = np.zeros(4)
+        for i, move in enumerate([(-1, 0), (1, 0), (0, -1), (0, 1)]):
+            is_valid = int(self.__can_move(x+move[0], y+move[1]))
+            valid[i] = is_valid
+        return np.array(valid)
         
     def __is_game_over(self):
         """Check if either the snake is out of bounds, hasn't eaten enough, or ate itself."""
-        x = self.head.x_pos
-        y = self.head.y_pos
+        x = self.snake[0, 0]
+        y = self.snake[0, 1]
         if self.moves_since_ate >= self.lifespan:
             self.final_state = True
+            self.death_penalty = 0
 
-        tail = self.tail
-        while (tail.next != None):
-            if (tail.x_pos == x and tail.y_pos == y):
+        for i in range(1, self.snake_length):
+            tail = self.snake[i]
+            if (tail[0] == x and tail[1] == y):
                 self.dead = True
                 self.final_state = True
-            tail = tail.next
-        
+                self.death_penalty = -1.0
+
         if not self.__can_move(x, y):
             self.dead = True
             self.final_state = True
+            self.death_penalty = -1.0
+        
+        if self.snake_length == self.size:
+            self.dead = False
+            self.final_state = True
+            self.death_penalty = 10
 
         return self.dead + self.final_state
 
@@ -112,65 +125,66 @@ class Game:
         if(action == 3):
             #North?
             self.__move(0, 1)
-        return self._get_map(), self.__get_reward(), self.__is_game_over()
+
+        is_game_over = self.__is_game_over()
+        if self.moves in self.checkpoint_timestamps and not is_game_over:
+            self.checkpoints.append(self.snake.copy())
+        return self._get_map(), self.__get_reward(), is_game_over
 
     def __contains_apple(self, x_pos, y_pos):
         return (x_pos == self.apple_x and y_pos == self.apple_y)
     
-    def __can_place_apple(self, x_pos, y_pos):
-        return(self._get_map()[0, x_pos, y_pos] == 0 and self._get_map()[1, x_pos, y_pos] == 0)
-
     def __remove_apple(self):
         self.apple_x = None
         self.apple_y = None
 
     def __try_to_eat(self, x_pos, y_pos):
-        if self.__contains_apple(x_pos, y_pos):
-            self.ate_last_turn = True
-            self.score += 1
-            self.moves_since_ate = 0
-            
-            #Adds a new tail to the end
-            #This should work because it just moves it to the next's position
-            self.tail = Tail(self.tail.x_pos, self.tail.y_pos, self.tail)
-
-            #Remove apple
-            self.__remove_apple()
-            return True
-        else:
+        if not self.__contains_apple(x_pos, y_pos):
             self.moves_since_ate += 1
             return False
+        self.ate_last_turn = True
+        self.score += 1
+        self.moves_since_ate = 0
+        
+        #Adds a new tail to the end
+        #This should work because it just moves it to the next's position
+        self.snake[self.snake_length] = [self.snake[self.snake_length-1, 0], self.snake[self.snake_length-1, 1]]
+
+        #Remove apple
+        self.__remove_apple()
+        self.snake_length += 1
+        return True
+            
 
     def __move_snake(self, x_dir, y_dir):
-        tail = self.tail
-        while (tail.next != None):
-            tail.x_pos = tail.next.x_pos
-            tail.y_pos = tail.next.y_pos
-            tail = tail.next
-        self.head.x_pos = self.head.x_pos+x_dir
-        self.head.y_pos = self.head.y_pos+y_dir
+        for i in range(self.snake_length-1, 0, -1):
+            self.snake[i, 0] = self.snake[i-1, 0]
+            self.snake[i, 1] = self.snake[i-1, 1]
+            
+        self.snake[0, 0] = self.snake[0, 0]+x_dir
+        self.snake[0, 1] = self.snake[0, 1]+y_dir
 
     def __move(self, x_dir, y_dir):
         """Moves the snake in the given direction, eating anything in its path. Includes a death check."""
 
-        x = self.head.x_pos + x_dir
-        y = self.head.y_pos + y_dir
+        x = self.snake[0, 0] + x_dir
+        y = self.snake[0, 1] + y_dir
 
         if not self.__can_move(x, y):
             self.dead = True
             self.final_state = True
             return
 
-        self.previousAppleDistance = self.distToApple()
         self.moves += 1
         
         ate = self.__try_to_eat(x, y)
         self.__move_snake(x_dir, y_dir)
         self.__is_game_over()
-        self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
-        if ate: 
-            self._addApple()
-            self.__game_map.update(self.head, self.tail, self.apple_x, self.apple_y)
+        self.__game_map.update(self.snake[:self.snake_length], [(self.apple_x, self.apple_y)])
+        if ate:
+            if self.snake_length < self.size: 
+                self._addApple()
+            self.__game_map.update(self.snake[:self.snake_length], [(self.apple_x, self.apple_y)])
 
 
     def _get_map(self):
