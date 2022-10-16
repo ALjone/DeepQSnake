@@ -44,4 +44,4 @@ class ReplayMemory(object):
 
 
     def __len__(self):
-        return min(len(self.apple_memory)*2, len(self.other_memory)*2)#len(self.death_memory), )
+        return min(len(self.apple_memory)*2, len(self.other_memory)*2)

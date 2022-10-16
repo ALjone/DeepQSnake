@@ -4,12 +4,10 @@ import numpy as np
 from game_map import Game_map
 from collections import deque
 
-#TODO: This makes checkpoints while testing
-
 reverse = {0: 1, 1: 0, 2: 3, 3: 2}
 
 class Game:
-    def __init__(self, size, lifespan, apple_reward, death_reward, checkpoint_timestamps, checkpoint_length, checkpoint_probability):
+    def __init__(self, size, lifespan, apple_reward, death_reward):
         """Initializes the game with the correct size and lifespan, and puts a head in the middle, as well as an apple randomly on the map"""
         self.mapsize: int = size
         self.size: int = size**2
@@ -18,9 +16,6 @@ class Game:
         self.apple_reward = apple_reward
         self.death_reward = death_reward
         self.death_penalty = 0
-        self.checkpoint_timestamps = checkpoint_timestamps
-        self.checkpoints = deque([],maxlen=checkpoint_length)
-        self.checkpoint_probability = checkpoint_probability
         self.reset()    
     
     def _addApple(self):
@@ -61,9 +56,6 @@ class Game:
         self.final_state: bool = False
         self.ate_last_turn: bool = False
 
-        if rn.random() < self.checkpoint_probability and len(self.checkpoints) > 0 and not test:
-            self.snake = rn.sample(self.checkpoints, 1)[0]
-
         #Add apple
         self.__game_map.update(self.snake[:self.snake_length], [(self.apple_x, self.apple_y)])
         self._addApple()
@@ -75,6 +67,7 @@ class Game:
         return (0 <= x < self.mapsize) and (0 <= y < self.mapsize and not self.__game_map.has_tail(x, y))
 
     def valid_moves(self):
+        #return np.array([1, 1, 1, 1])
         x = self.snake[0, 0]
         y = self.snake[0, 1]
         valid = np.zeros(4)
@@ -90,13 +83,6 @@ class Game:
         if self.moves_since_ate >= self.lifespan:
             self.final_state = True
             self.death_penalty = 0
-
-        for i in range(1, self.snake_length):
-            tail = self.snake[i]
-            if (tail[0] == x and tail[1] == y):
-                self.dead = True
-                self.final_state = True
-                self.death_penalty = -1.0
 
         if not self.__can_move(x, y):
             self.dead = True
@@ -127,8 +113,6 @@ class Game:
             self.__move(0, 1)
 
         is_game_over = self.__is_game_over()
-        if self.moves in self.checkpoint_timestamps and not is_game_over:
-            self.checkpoints.append(self.snake.copy())
         return self._get_map(), self.__get_reward(), is_game_over
 
     def __contains_apple(self, x_pos, y_pos):

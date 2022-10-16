@@ -2,4 +2,6 @@ __pycache__/
 model_*
 previous_model
 checkpoints/*
+!checkpoints/almost_perfect
+!checkpoints/architecture_for_almost_perfect.py
 !checkpoints/last

@@ -3,13 +3,13 @@ import torch
 from hyperparams import Hyperparams
 import random as rn
 from network_trainer import DQTrainer
-from ReplayMemory import ReplayMemory, Memory
+from prioritized_replay_memory import PrioritizedReplayBuffer
 
 class DQAgent:
     def __init__(self, hyperparams: Hyperparams) -> None:
         
         self.action_space = hyperparams.action_space
-        self.bank: ReplayMemory = ReplayMemory(hyperparams.replay_size, hyperparams.apple_reward, hyperparams.death_reward)
+        self.bank: PrioritizedReplayBuffer = PrioritizedReplayBuffer((3, hyperparams.size, hyperparams.size), 1, hyperparams.replay_size, hyperparams.device, beta = hyperparams.beta, alpha = hyperparams.alpha)
         self.testing: bool = False
         self.episodes: int = 0
         self.trainer: DQTrainer = DQTrainer(hyperparams)
@@ -27,10 +27,15 @@ class DQAgent:
         return max(self._exploration_rate_curr, self._exploration_rate_end)
 
     def get_move(self, state: np.ndarray, valid_moves: np.ndarray) -> int:
-        if np.sum(valid_moves) in [0, 1]:
+        if np.sum(valid_moves) == 1:
             return np.argmax(valid_moves)
+
+        elif np.sum(valid_moves) == 0:
+            return np.random.randint(0, 3)
+        
         state = torch.from_numpy(state)
         valid_moves = torch.from_numpy(valid_moves)
+
         if self.testing:
             prediction = self._predict(state, valid_moves)
             return prediction
@@ -44,23 +49,20 @@ class DQAgent:
         return self._predict(state, valid_moves)
 
     def make_memory(self, action: int, state: np.ndarray, next_state: np.ndarray, reward: float, done: bool) -> None:
-        #TODO fix to not use memory?
-        #TODO Rename to end of turn?
         state = torch.from_numpy(state)
         next_state = torch.from_numpy(next_state)
-        #TODO currently doesn't work with stack
-        self.bank.push(self.__get_features(state), torch.tensor([action]), self.__get_features(next_state) if not done else None, torch.tensor(reward), done)
+        #print(action.shape)
+        self.bank.add((self.__get_features(state), torch.tensor(action), torch.tensor(reward), self.__get_features(next_state) if not done else np.zeros(self.__get_features(next_state).shape), int(done)))
 
         self.previous_state = state if not done else None
 
     def game_is_done(self):
         """Call this after an episode is finished."""
         self._exploration_rate_curr -= self.epsilon
-        self.trainer.train(self.bank)
+        idxs, error = self.trainer.train(self.bank)
+        self.bank.update_priorities(idxs, error)
 
     def __get_features(self, state: torch.Tensor):
-        if self.hyperparams.frame_stacks == 2:
-            return torch.cat((state, self.previous_state if self.previous_state is not None else state), dim = 0)
         return state
 
 

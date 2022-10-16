@@ -72,12 +72,14 @@ class Trainer:
         moves = 0
         num_bad = 0
         self.last_game_apples = []
+        actions = [0, 0, 0, 0]
         for _ in range(self.test_games):
             temp_score = 0
             state = self.game.reset(True)
             done = False
             while(not done):
                 move = self.agent.get_move(state, self.game.valid_moves())
+                actions[move] += 1
                 state, reward, done = self.game.do_action(move)
                 moves += 1
                 if self.game.ate_last_turn: 
@@ -89,12 +91,13 @@ class Trainer:
                 num_bad += 1
             self.last_game_apples.append(temp_score)
         #print(f"   Average over {self.test_games} test games is {round(score/self.test_games, 2)} apples and {int(moves/self.test_games)} moves. Max apples were {max_score}, and number of games without any apples was {round((num_bad/self.test_games)*100, 2)}%.")
-        print(f"\tAverage apples: {round(score/self.test_games, 2)}\n\tAverage moves: {int(moves/self.test_games)} moves\n\tMax apples: {max_score}\n\tGames without apples: {round((num_bad/self.test_games)*100, 2)}%")
+        actions = [round((a/sum(actions))*100, 2) for a in actions]
+        print(f"\tAverage apples: {round(score/self.test_games, 2)}\n\tAverage moves: {int(moves/self.test_games)} moves\n\tMax apples: {max_score}\n\tGames without apples: {round((num_bad/self.test_games)*100, 2)}%\n\tAction distribution: {actions}")
         self.agent.testing = False
         self.average_scores.append(score/self.test_games)
         self.max_scores.append(max_score)
         self.average_moves.append(moves/self.test_games)
-        self.apple_less_games.append(num_bad)
+        self.apple_less_games.append((num_bad/self.test_games)*100)
         #self.plot()
 
     def get_benchmark(self):
@@ -107,12 +110,14 @@ class Trainer:
         moves = 0
         num_bad = 0
         self.last_game_apples = []
+        actions = [0, 0, 0, 0]
         for _ in range(sims):
             temp_score = 0
             self.game.reset(True)
             done = False
             while(not done):
                 move = self.agent._get_random(torch.tensor(self.game.valid_moves()))
+                actions[move] += 1
                 _, _, done = self.game.do_action(move)
                 moves += 1
                 if self.game.ate_last_turn: 
@@ -122,8 +127,9 @@ class Trainer:
                 max_score = temp_score
             if temp_score == 0:
                 num_bad += 1
-            
-        print(f"Benchmark: \n\tAverage apples: {round(score/sims, 2)}\n\tAverage moves: {int(moves/sims)} moves\n\tMax apples: {max_score}\n\tGames without apples: {round((num_bad/sims)*100, 2)}%\n\tPlayed {round(sims/(time.time()-s), 1)} g/s")
+        
+        actions = [round((a/sum(actions))*100, 2) for a in actions]
+        print(f"Benchmark: \n\tAverage apples: {round(score/sims, 2)}\n\tAverage moves: {int(moves/sims)} moves\n\tMax apples: {max_score}\n\tGames without apples: {round((num_bad/sims)*100, 2)}%\n\tPlayed {round(sims/(time.time()-s), 1)} g/s\n\tAction distribution: {actions}")
         self.agent.testing = False
 
     def play_episode(self):
@@ -168,19 +174,20 @@ class Trainer:
                 f"Playing {round(self.update_rate/(time.time()-prev_time), 1)} g/s")
                 prev_time = time.time() 
                 self.test()
+            if self.episodes % self.hyperparams.model_save_rate == 0:
                 torch.save(self.agent.trainer.model, "checkpoints/last_checkpoint_in_case_of_crash")
         self.save()
 
         self.plot()
         print(f"Finished training. Took {self.formate_time(int(time.time()-start_time))}.")
         print("Expected value at start:", torch.round(self.agent.trainer.model(torch.tensor(self.game.reset())), decimals = 2))
-        input("Ready? ")
-        self.visualizer.load_game("last", self.hyperparams)
-        self.visualizer.visualize()
+        #input("Ready? ")
+        #self.visualizer.load_game("last", self.hyperparams)
+        #self.visualizer.visualize()
 
 
 hyperparams = Hyperparams()
-#hyperparams.set_load_path("previous_model")
+hyperparams.set_load_path("checkpoints\last_checkpoint_in_case_of_crash")
 
 trainer = Trainer(hyperparams = hyperparams)
 trainer.main()
