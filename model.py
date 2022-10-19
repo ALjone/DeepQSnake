@@ -6,7 +6,7 @@ class SnakeBrain(torch.nn.Module):
         super(SnakeBrain, self).__init__()
 
         #Part 1
-        self.part1 = nn.Sequential(
+        self.conv1 = nn.Sequential(
             nn.Conv2d(3, 16, 2, padding = (1, 1)),
             nn.BatchNorm2d(16),
             nn.ReLU(),
@@ -25,7 +25,7 @@ class SnakeBrain(torch.nn.Module):
         )
 
         #Part 2
-        self.part2 = nn.Sequential(
+        self.conv2 = nn.Sequential(
         nn.Conv2d(3, 16, 3, padding = (2, 2)),
             nn.BatchNorm2d(16),
             nn.ReLU(),
@@ -67,7 +67,7 @@ class SnakeBrain(torch.nn.Module):
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
         x = x.float()
-        x = torch.concat((torch.flatten(self.part1(x), 1), torch.flatten(self.part2(x), 1)), axis = 1)
+        x = torch.concat((torch.flatten(self.conv1(x), 1), torch.flatten(self.conv2(x), 1)), axis = 1)
         x = self.linear(x)
         A = self.A(x)
         return self.V(x) + (A-A.mean(dim = 1, keepdim = True))

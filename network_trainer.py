@@ -7,7 +7,21 @@ import numpy as np
 
 class DQTrainer:
     def __init__(self, hyperparams: Hyperparams) -> None:
-        self.model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space) if hyperparams.load_path is None else torch.load(hyperparams.load_path)
+        self.model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space)
+
+        if hyperparams.load_path is not None:
+            weights = torch.load(hyperparams.load_path)
+            try:
+                self.model.load_state_dict(weights.state_dict())
+                print("Successfully loaded model")
+            except:
+                for name, param in weights.state_dict().items():
+                    if "conv" not in name:
+                        continue
+                    self.model[name].copy_(param)
+                print("Successfully loaded conv layers")
+            
+
         #Try high
         self.gamma: float = hyperparams.gamma
         self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=hyperparams.lr, weight_decay=0.001)
@@ -22,7 +36,6 @@ class DQTrainer:
         self.model.to(self.device)
         self.target_model.to(self.device)
 
-        self.episodes: int = 0
         self.batch_size = hyperparams.batch_size
         self.clip: int = hyperparams.clip
 
@@ -60,8 +73,8 @@ class DQTrainer:
     def train(self, bank: PrioritizedReplayBuffer) -> None:
         if len(bank) < self.batch_size:
             return [], []
+
         self.model.train()
-        self.episodes += 1
         self.soft_update()
 
         samples = bank.sample(self.batch_size)

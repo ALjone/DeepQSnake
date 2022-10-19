@@ -7,7 +7,7 @@ class Game_map:
         self.reset()
 
     def has_tail(self, x, y):
-        return 0 < self.game_map[1, x, y] < 1
+        return self.game_map[1, x, y] > 0
     
     def update(self, snake, apples):
         """Resets and updates the position of all the objectives on the map"""

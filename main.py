@@ -165,12 +165,12 @@ class Trainer:
         while (self.episodes < self.max_episodes):
             self.play_episode()
             self.episodes += 1
-            self.agent.game_is_done()
+            self.agent.game_is_done()    
 
             #TODO maybe make this only care about the last epoch (or last X epochs) in order to make it more accurate as the snake survives longer
             if self.episodes%self.update_rate == 0 and self.episodes != 0:
                 time_left = (time.time()-prev_time)*((self.max_episodes-self.episodes)/self.update_rate)
-                print(f"\nAt {int(self.episodes/1000)}k/{int(self.max_episodes/1000)}k games played. Exploration rate {round(self.agent._exploration_rate(), 3)}. ETA: {self.formate_time(int(time_left))}.",
+                print(f"\nAt {round(self.episodes/1000, 1)}k/{int(self.max_episodes/1000)}k games played. Exploration rate {round(self.agent._exploration_rate(), 3)}. ETA: {self.formate_time(int(time_left))}.",
                 f"Playing {round(self.update_rate/(time.time()-prev_time), 1)} g/s")
                 prev_time = time.time() 
                 self.test()
@@ -178,8 +178,8 @@ class Trainer:
                 torch.save(self.agent.trainer.model, "checkpoints/last_checkpoint_in_case_of_crash")
         self.save()
 
-        self.plot()
         print(f"Finished training. Took {self.formate_time(int(time.time()-start_time))}.")
+        self.plot()
         print("Expected value at start:", torch.round(self.agent.trainer.model(torch.tensor(self.game.reset())), decimals = 2))
         #input("Ready? ")
         #self.visualizer.load_game("last", self.hyperparams)
@@ -187,7 +187,7 @@ class Trainer:
 
 
 hyperparams = Hyperparams()
-hyperparams.set_load_path("checkpoints\last_checkpoint_in_case_of_crash")
+hyperparams.set_load_path("checkpoints\\almost_perfect")
 
 trainer = Trainer(hyperparams = hyperparams)
 trainer.main()

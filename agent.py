@@ -9,7 +9,7 @@ class DQAgent:
     def __init__(self, hyperparams: Hyperparams) -> None:
         
         self.action_space = hyperparams.action_space
-        self.bank: PrioritizedReplayBuffer = PrioritizedReplayBuffer((3, hyperparams.size, hyperparams.size), 1, hyperparams.replay_size, hyperparams.device, beta = hyperparams.beta, alpha = hyperparams.alpha)
+        self.bank: PrioritizedReplayBuffer = PrioritizedReplayBuffer((3, hyperparams.size, hyperparams.size), 1, hyperparams.replay_size, hyperparams.device, beta =hyperparams.beta, alpha = hyperparams.alpha)
         self.testing: bool = False
         self.episodes: int = 0
         self.trainer: DQTrainer = DQTrainer(hyperparams)
@@ -59,8 +59,9 @@ class DQAgent:
     def game_is_done(self):
         """Call this after an episode is finished."""
         self._exploration_rate_curr -= self.epsilon
-        idxs, error = self.trainer.train(self.bank)
-        self.bank.update_priorities(idxs, error)
+        for i in range(self.hyperparams.train_times):
+            idxs, error = self.trainer.train(self.bank)
+            self.bank.update_priorities(idxs, error)
 
     def __get_features(self, state: torch.Tensor):
         return state
