@@ -1,6 +1,3 @@
-#import matplotlib.pyplot as plt
-from typing import List
-from unicodedata import decimal
 from agent import DQAgent
 import torch
 from game import Game
@@ -9,12 +6,13 @@ from checkpoint_visualizer import Visualizer
 from hyperparams import Hyperparams
 import time
 from matplotlib import pyplot as plt
+from tqdm import tqdm
+
 
 class Trainer:
     def __init__(self, hyperparams: Hyperparams) -> None:
         # params
         self.max_episodes: int = hyperparams.max_episodes
-        self.episodes: int = 0 
         self.game: Game = hyperparams.game
         
         self.agent: DQAgent = DQAgent(hyperparams)
@@ -29,8 +27,6 @@ class Trainer:
         self.apple_less_games = []
         self.last_game_apples = []
 
-        #For visualizing
-        self.visualizer = Visualizer()
         self.hyperparams = hyperparams
 
     def plot(self):
@@ -73,7 +69,7 @@ class Trainer:
         num_bad = 0
         self.last_game_apples = []
         actions = [0, 0, 0, 0]
-        for _ in range(self.test_games):
+        for _ in tqdm(range(self.test_games), leave=False):
             temp_score = 0
             state = self.game.reset(True)
             done = False
@@ -111,7 +107,7 @@ class Trainer:
         num_bad = 0
         self.last_game_apples = []
         actions = [0, 0, 0, 0]
-        for _ in range(sims):
+        for _ in tqdm(range(sims), leave=False):
             temp_score = 0
             self.game.reset(True)
             done = False
@@ -147,7 +143,7 @@ class Trainer:
         m, s = divmod(seconds, 60)
         h, m = divmod(m, 60)
         if h == 0: 
-            return f'{int(m)} minutes and {int(s)} seconds'
+            return f'{int(m)} minutes and {int(s)} seconds' 
         else:
             return f'{int(h)} hours, {int(m)} minutes and {int(s)} seconds'
 
@@ -155,39 +151,39 @@ class Trainer:
         torch.save(self.agent.trainer.model, "checkpoints/last") #For easily getting it
         torch.save(self.agent.trainer.model, 'models/model_'+ datetime.now().strftime("%m_%d_%Y%H_%M_%S"))
 
-    def main(self):
-        #TODO TQDM  
+    def run(self, benchmark = False):
         start_time = time.time() 
         print(f"GPU available: {torch.cuda.is_available()}")
-        self.get_benchmark()
-
+        if benchmark:
+            self.get_benchmark()
+        episodes = 0
         prev_time = start_time
-        while (self.episodes < self.max_episodes):
-            self.play_episode()
-            self.episodes += 1
-            self.agent.game_is_done()    
+        while (episodes < self.max_episodes):
+            for i in tqdm(range(self.update_rate), leave=False):
+                self.play_episode()
+                episodes += 1
+                self.agent.game_is_done()    
+                if episodes % self.hyperparams.model_save_rate == 0:
+                    torch.save(self.agent.trainer.model, "checkpoints/last_checkpoint_in_case_of_crash")
 
-            #TODO maybe make this only care about the last epoch (or last X epochs) in order to make it more accurate as the snake survives longer
-            if self.episodes%self.update_rate == 0 and self.episodes != 0:
-                time_left = (time.time()-prev_time)*((self.max_episodes-self.episodes)/self.update_rate)
-                print(f"\nAt {round(self.episodes/1000, 1)}k/{int(self.max_episodes/1000)}k games played. Exploration rate {round(self.agent._exploration_rate(), 3)}. ETA: {self.formate_time(int(time_left))}.",
-                f"Playing {round(self.update_rate/(time.time()-prev_time), 1)} g/s")
-                prev_time = time.time() 
-                self.test()
-            if self.episodes % self.hyperparams.model_save_rate == 0:
-                torch.save(self.agent.trainer.model, "checkpoints/last_checkpoint_in_case_of_crash")
+            #if episodes%self.update_rate == 0 and episodes != 0:
+            time_left = (time.time()-prev_time)*((self.max_episodes-episodes)/self.update_rate)
+            print(f"\nAt {round(episodes/1000, 1)}k/{int(self.max_episodes/1000)}k games played. Exploration rate {round(self.agent._exploration_rate(), 3)}. ETA: {self.formate_time(int(time_left))}.",
+            f"Playing {round(self.update_rate/(time.time()-prev_time), 1)} g/s")
+            prev_time = time.time() 
+            self.test()
         self.save()
 
         print(f"Finished training. Took {self.formate_time(int(time.time()-start_time))}.")
         self.plot()
         print("Expected value at start:", torch.round(self.agent.trainer.model(torch.tensor(self.game.reset())), decimals = 2))
-        #input("Ready? ")
-        #self.visualizer.load_game("last", self.hyperparams)
-        #self.visualizer.visualize()
 
 
-hyperparams = Hyperparams()
-hyperparams.set_load_path("checkpoints\\almost_perfect")
 
-trainer = Trainer(hyperparams = hyperparams)
-trainer.main()
+if __name__ == "__main__":
+
+    hyperparams = Hyperparams()
+    hyperparams.set_load_path("checkpoints\\last_checkpoint_in_case_of_crash")
+
+    trainer = Trainer(hyperparams = hyperparams)
+    trainer.run()

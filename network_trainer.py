@@ -45,7 +45,7 @@ class DQTrainer:
 
     def rand_argmax(self, tens):
         argmaxes = torch.where(tens == tens.max())[1]
-        return np.random.choice(argmaxes)
+        return np.random.choice(argmaxes.cpu())
 
     def reload_model(self):
         if self.hyperparams.load_path is not None:
@@ -58,6 +58,8 @@ class DQTrainer:
             features = features.to(self.device)
             self.model.eval()
             pred = self.model(features)
+            return self.rand_argmax(pred)
+            #TODO this is not action masked
             #https://discuss.pytorch.org/t/masked-argmax-in-pytorch/105341
             large = torch.finfo (pred.dtype).max
             return self.rand_argmax((pred - large * (1 - valid_moves) - large * (1 - valid_moves)))
@@ -88,10 +90,10 @@ class DQTrainer:
 
         state, action, reward, next_state, done = batch
 
+
         Q_next = self.target_model(next_state).max(dim=1).values
         Q_target = reward + self.gamma * (1 - done) * Q_next
         Q = self.model(state)[torch.arange(len(action)), action.to(torch.long).flatten()]
-
 
         td_error = torch.abs(Q - Q_target).detach()
         loss = torch.mean((Q - Q_target)**2 * weights)

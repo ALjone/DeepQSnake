@@ -1,3 +1,4 @@
+import torch
 import random as rn
 from typing import Tuple
 import numpy as np
@@ -7,7 +8,7 @@ from collections import deque
 reverse = {0: 1, 1: 0, 2: 3, 3: 2}
 
 class Game:
-    def __init__(self, size, lifespan, apple_reward, death_reward):
+    def __init__(self, size, lifespan, apple_reward, death_reward, device):
         """Initializes the game with the correct size and lifespan, and puts a head in the middle, as well as an apple randomly on the map"""
         self.mapsize: int = size
         self.size: int = size**2
@@ -16,12 +17,13 @@ class Game:
         self.apple_reward = apple_reward
         self.death_reward = death_reward
         self.death_penalty = 0
+        self.device = device
         self.reset()    
     
     def _addApple(self):
         """Adds and apple to the map at a random legal position"""
         #NOTE: Might be sort of a little bit bugged here, given that 
-        true_idx = np.argwhere(self.__game_map.possible_apple_pos_map == 0)
+        true_idx = torch.argwhere(self.__game_map.possible_apple_pos_map == 0)
         random_idx = np.random.randint(len(true_idx), size=1)
         random_index = true_idx[random_idx][0]
         self.apple_x = random_index[0]
@@ -70,17 +72,18 @@ class Game:
         #return np.array([1, 1, 1, 1])
         x = self.snake[0, 0]
         y = self.snake[0, 1]
-        valid = np.zeros(4)
+        valid = torch.zeros(4)
         for i, move in enumerate([(-1, 0), (1, 0), (0, -1), (0, 1)]):
             is_valid = int(self.__can_move(x+move[0], y+move[1]))
             valid[i] = is_valid
-        return np.array(valid)
+        return valid#.to(self.device)
         
     def __is_game_over(self):
         """Check if either the snake is out of bounds, hasn't eaten enough, or ate itself."""
         x = self.snake[0, 0]
         y = self.snake[0, 1]
         if self.moves_since_ate >= self.lifespan:
+            self.dead = True
             self.final_state = True
             self.death_penalty = 0
 
@@ -157,6 +160,7 @@ class Game:
         if not self.__can_move(x, y):
             self.dead = True
             self.final_state = True
+            self.death_penalty = -1
             return
 
         self.moves += 1
@@ -172,4 +176,4 @@ class Game:
 
 
     def _get_map(self):
-        return self.__game_map.get_map()
+        return self.__game_map.get_map().to(self.device)

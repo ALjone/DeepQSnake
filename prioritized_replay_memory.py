@@ -141,7 +141,7 @@ class PrioritizedReplayBuffer:
             self.next_state[sample_idxs].to(self.device),
             self.done[sample_idxs].to(self.device)
         )
-        return batch, weights, tree_idxs
+        return batch, weights.to(self.device), tree_idxs
 
     def update_priorities(self, data_idxs, priorities):
         if isinstance(priorities, torch.Tensor):

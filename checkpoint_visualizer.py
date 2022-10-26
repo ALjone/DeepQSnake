@@ -51,14 +51,16 @@ class Visualizer:
         self.agent.trainer.model.eval()
         ls = [[], [], [], []]
         counter = 0
+        add = ""
         while(True):
             #Should probably time how long everything takes rather than using a flat 0.1s
-            time.sleep(0.1)
-            expected = [x.item() for x in self.agent.trainer.model(torch.tensor(state))[0]]
+            time.sleep(0.05  )
+            _, V, A = self.agent.trainer.model(state, return_separate = True)
+            expected = [x.item() for x in A.to("cpu")[0]]
             for i, e in enumerate(expected):
                 ls[i].append(e)
             #Left, Right, Down, Up
-            expected = "Left: {0}, Right: {1}, Down: {2}, Up: {3}".format(*[round(e, 3) for e in expected])
+            expected = "State: {4} Left: {0}, Right: {1}, Down: {2}, Up: {3}".format(*[round(e, 3) for e in expected], round(V.to("cpu").item(), 3))
             #print(expected)
             self.graphics.updateWin(self.game, total_reward, expected)
             #print(self.game.valid_moves())
@@ -75,13 +77,15 @@ class Visualizer:
             if(done):
                 self.graphics.updateWin(self.game, total_reward, expected)
                 self.game.reset()
-                print("Stds:", [np.round(np.std(a), 3) for a in ls], "Moves:", counter)
+                print("Stds:", [torch.round(torch.std(torch.tensor(a)), decimals = 3).item() for a in ls], "Moves:", counter)
                 print("Expected before final state", expected, "Move:", move)
-                #print("Expected final state:", self.get_expected(state))
+                if prev_move == reverse[move]:
+                    print("Aborted due to repeated move ")
+                print()
                 break
 
     def get_expected(self, state):
-        expected = [x.item() for x in self.agent.trainer.model(torch.tensor(state))[0]]
+        expected = [x.item() for x in self.agent.trainer.model(state)[0]]
         #Left, Right, Down, Up
         expected = "Left: {0}, Right: {1}, Down: {2}, Up: {3}".format(*[round(e, 3) for e in expected])
         return expected

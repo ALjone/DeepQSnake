@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 
 class Game_map:
     def __init__(self, mapsize) -> None:
@@ -16,7 +16,7 @@ class Game_map:
 
         #Add head
 
-        self.game_map[0, snake[0, 0], snake[0, 1]] = 1 
+        self.game_map[0, snake[0, 0], snake[0, 1]] = 1
         self.possible_apple_pos_map[snake[0, 0], snake[0, 1]] = 1
 
         #Add tail
@@ -36,5 +36,5 @@ class Game_map:
         return self.game_map
 
     def reset(self):
-        self.game_map = np.zeros((3, self.mapsize, self.mapsize))
-        self.possible_apple_pos_map = np.zeros((self.mapsize, self.mapsize), dtype = np.int)
+        self.game_map = torch.zeros((3, self.mapsize, self.mapsize))
+        self.possible_apple_pos_map = torch.zeros((self.mapsize, self.mapsize), dtype = torch.int)
