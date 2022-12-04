@@ -2,11 +2,12 @@ from agent import DQAgent
 import torch
 from game import Game
 from datetime import datetime
-from checkpoint_visualizer import Visualizer
+import numpy as np
 from hyperparams import Hyperparams
 import time
 from matplotlib import pyplot as plt
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 
 class Trainer:
@@ -20,81 +21,78 @@ class Trainer:
         self.update_rate: int = hyperparams.update_rate
         self.test_games: int = hyperparams.test_games
 
-        #For plotting
-        self.average_scores = [] 
-        self.max_scores = []
-        self.average_moves = []
-        self.apple_less_games = []
-        self.last_game_apples = []
-
         self.hyperparams = hyperparams
 
-    def plot(self):
-        #TODO Expand and crispen up
-        _, axs = plt.subplots(2, 3)
-        axs[0, 0].plot(self.average_scores)
-        axs[0, 0].set_title("Average amount of apples eaten in a game on average")
-        axs[0, 0].set_xlabel("Number of games (in thousands)")
-        axs[0, 0].set_ylabel("Average apples eaten")
+        self.writer = SummaryWriter()
+        self.moves_made = 0
 
-        axs[0, 1].plot(self.max_scores)
-        axs[0, 1].set_title(f"Max amount of apples eaten in {self.test_games} test games")
-        axs[0, 1].set_xlabel("Number of games (in thousands)")
-        axs[0, 1].set_ylabel("Max apples eaten")
+    def update_writer(self, games_per_second, episodes, noise_level):
+        self.writer.add_scalar("Other/Games per second", games_per_second, episodes//self.update_rate)
+        self.writer.add_scalar("Other/Noise level", noise_level, episodes//self.update_rate)
 
-        axs[0, 2].plot(self.average_moves)
-        axs[0, 2].set_title("Average amount of moves made in a game on average before dying")
-        axs[0, 2].set_xlabel("Number of games (in thousands)")
-        axs[0, 2].set_ylabel("Average moves made")
 
-        axs[1, 0].plot(self.apple_less_games)
-        axs[1, 0].set_title(f"Amount of games where no apple was eaten in {self.test_games} test games")
-        axs[1, 0].set_xlabel("Number of games (in thousands)")
-        axs[1, 0].set_ylabel("Games without any apples")
-
-        axs[1, 1].hist(self.last_game_apples)
-        axs[1, 1].set_title(f"Distribution of apples eaten in {self.test_games} test games")
-
-        plt.show()
-        #plt.pause(0.0001)
-
-    def test(self):
+    def test(self, episodes):
         #Having a function to print is bad, should be fixed
         #Also make it plot or something 
         #This is very hacky...
-        score = 0
+        apples = []
         self.agent.testing = True
         max_score = 0
         moves = 0
         num_bad = 0
-        self.last_game_apples = []
+        last_game_apples = []
         actions = [0, 0, 0, 0]
-        for _ in tqdm(range(self.test_games), leave=False):
+        V = []
+        As = [[], [], [], []]
+        for i in tqdm(range(self.test_games), leave=False):
             temp_score = 0
             state = self.game.reset(True)
             done = False
             while(not done):
                 move = self.agent.get_move(state, self.game.valid_moves())
                 actions[move] += 1
-                state, reward, done = self.game.do_action(move)
+                state, _, done = self.game.do_action(move)
                 moves += 1
-                if self.game.ate_last_turn: 
-                    score += 1
+                if i == self.test_games-1: #Only do this for last game
+                    _, value, action_values = self.agent.trainer.model(state, return_separate = True)
+                    V.append(value.item())
+                    for A, value in zip(As, action_values.squeeze()):
+                        A.append(value.item())
+                if self.game.ate_last_turn:
                     temp_score += 1
+            apples.append(temp_score)
             if temp_score > max_score:
                 max_score = temp_score
             if temp_score == 0:
                 num_bad += 1
-            self.last_game_apples.append(temp_score)
-        #print(f"   Average over {self.test_games} test games is {round(score/self.test_games, 2)} apples and {int(moves/self.test_games)} moves. Max apples were {max_score}, and number of games without any apples was {round((num_bad/self.test_games)*100, 2)}%.")
+            last_game_apples.append(temp_score)
         actions = [round((a/sum(actions))*100, 2) for a in actions]
-        print(f"\tAverage apples: {round(score/self.test_games, 2)}\n\tAverage moves: {int(moves/self.test_games)} moves\n\tMax apples: {max_score}\n\tGames without apples: {round((num_bad/self.test_games)*100, 2)}%\n\tAction distribution: {actions}")
+        std = np.std(apples)
+        print(f"\tAverage apples: {round(sum(apples)/self.test_games, 2)} (std: {round(std, 5)})\n\tAverage moves: {int(moves/self.test_games)} moves\n\tMax apples: {max_score}\n\tGames without apples: {round((num_bad/self.test_games)*100, 2)}%\n\tAction distribution: {actions}")
         self.agent.testing = False
-        self.average_scores.append(score/self.test_games)
-        self.max_scores.append(max_score)
-        self.average_moves.append(moves/self.test_games)
-        self.apple_less_games.append((num_bad/self.test_games)*100)
-        #self.plot()
+
+        self.writer.add_scalar("Average/Average apples", sum(apples)/self.test_games, episodes//self.update_rate)
+
+        self.writer.add_scalar("Average/Average moves", moves/self.test_games, episodes//self.update_rate)
+        
+        self.writer.add_scalar("Apple num/Max apples", max_score, episodes//self.update_rate)
+
+        self.writer.add_scalar("Apple num/No apples", (num_bad/self.test_games)*100, episodes//self.update_rate)
+
+        self.writer.add_scalar("Other/std of average apple estimate", std, episodes//self.update_rate)
+
+        self.writer.add_histogram("Apple Distribution", torch.tensor(last_game_apples))
+
+        plt.plot(V)
+        self.writer.add_figure("V and A/V as function of time", plt.gcf(), episodes//self.update_rate)
+        
+        highest = max(map(max, As))
+        lowest = min(map(min, As))
+        for A, dir in zip(As, ["Left", "Right", "Down", "Up"]):
+            plt.plot(A)
+            plt.ylim((lowest*1.1, highest*1.1))
+            plt.legend([dir])
+            self.writer.add_figure(f"V and A/{dir}-value as function of time", plt.gcf(), episodes//self.update_rate)
 
     def get_benchmark(self):
         score = 0
@@ -105,7 +103,6 @@ class Trainer:
         max_score = 0
         moves = 0
         num_bad = 0
-        self.last_game_apples = []
         actions = [0, 0, 0, 0]
         for _ in tqdm(range(sims), leave=False):
             temp_score = 0
@@ -125,7 +122,7 @@ class Trainer:
                 num_bad += 1
         
         actions = [round((a/sum(actions))*100, 2) for a in actions]
-        print(f"Benchmark: \n\tAverage apples: {round(score/sims, 2)}\n\tAverage moves: {int(moves/sims)} moves\n\tMax apples: {max_score}\n\tGames without apples: {round((num_bad/sims)*100, 2)}%\n\tPlayed {round(sims/(time.time()-s), 1)} g/s\n\tAction distribution: {actions}")
+        print(f"Benchmark: \n\tAverage apples: {round(score/sims, 2)}\n\tAverage moves: {int(moves/sims)} moves\n\tMax apples: {max_score}\n\tGames without apples: {round((num_bad/sims)*100, 2)}%\n\tPlayed {round(sims/(time.time()-s), 2)} g/s\n\tAction distribution: {actions}")
         self.agent.testing = False
 
     def play_episode(self):
@@ -136,6 +133,10 @@ class Trainer:
             state = next_state
             next_state, reward, done = self.game.do_action(action)
             self.agent.make_memory(action, state, next_state, reward, done)
+            self.moves_made += 1
+
+            if self.moves_made%self.hyperparams.train_rate == 0:
+                self.agent.train()
 
 
     def formate_time(self, seconds):
@@ -162,27 +163,27 @@ class Trainer:
             for i in tqdm(range(self.update_rate), leave=False):
                 self.play_episode()
                 episodes += 1
-                self.agent.game_is_done()    
+                self.agent.train()    
                 if episodes % self.hyperparams.model_save_rate == 0:
                     torch.save(self.agent.trainer.model, "checkpoints/last_checkpoint_in_case_of_crash")
 
             #if episodes%self.update_rate == 0 and episodes != 0:
             time_left = (time.time()-prev_time)*((self.max_episodes-episodes)/self.update_rate)
-            print(f"\nAt {round(episodes/1000, 1)}k/{int(self.max_episodes/1000)}k games played. Exploration rate {round(self.agent._exploration_rate(), 3)}. ETA: {self.formate_time(int(time_left))}.",
-            f"Playing {round(self.update_rate/(time.time()-prev_time), 1)} g/s")
+            print(f"\nAt {round(episodes/1000, 1)}k/{round(self.max_episodes/1000, 1)}k games played. Noise level for exploration: {round(self.agent.trainer.model.get_noise_level(), 4)}. ETA: {self.formate_time(int(time_left))}.",
+            f"Playing {round(self.update_rate/(time.time()-prev_time), 2)} g/s")
+            self.test(episodes)
+            self.update_writer(games_per_second=self.update_rate/(time.time()-prev_time), episodes=episodes, noise_level = self.agent.trainer.model.get_noise_level())
             prev_time = time.time() 
-            self.test()
         self.save()
 
         print(f"Finished training. Took {self.formate_time(int(time.time()-start_time))}.")
-        self.plot()
         print("Expected value at start:", torch.round(self.agent.trainer.model(torch.tensor(self.game.reset())), decimals = 2))
 
 
 
 if __name__ == "__main__":
 
-    hyperparams = Hyperparams()
+    hyperparams = Hyperparams() 
     hyperparams.set_load_path("checkpoints\\last_checkpoint_in_case_of_crash")
 
     trainer = Trainer(hyperparams = hyperparams)

@@ -1,9 +1,9 @@
 To do:
 
-Rewrite checkpoints to just save a the model of a training session along with its hyperparameter file (pickle?)
-Comment and clean up code
-Make multi-agent setup
-Try same setup with different games
-Input to linear layers that says something about whether or not that state has already been visited
-
-Saves the plots 
+Attempt distributed agents
+Rewrite game to C/C++/Java/Rust/Whatever
+Do more research on loss function for dueling heads, and general network architecture
+Research better exploring method than epsilon-greedy (Preferably one that simply gets better the longer you train without human intereference)
+Make a custom noisy layer for noisy-nets
+Make website that visualizes the best model
+Frame stacking is necessary 

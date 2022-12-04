@@ -11,31 +11,14 @@ class DQAgent:
         self.action_space = hyperparams.action_space
         self.bank: PrioritizedReplayBuffer = PrioritizedReplayBuffer((3, hyperparams.size, hyperparams.size), 1, hyperparams.replay_size, hyperparams.device, beta =hyperparams.beta, alpha = hyperparams.alpha)
         self.testing: bool = False
-        self.episodes: int = 0
-        self.trainer: DQTrainer = DQTrainer(hyperparams)
-        self.hyperparams: Hyperparams = hyperparams
-        
-        self.epsilon: float = hyperparams.epsilon
 
-        self._exploration_rate_curr: float = hyperparams.exploration_rate_start
-        self._exploration_rate_end: float = hyperparams.exploration_rate_end
+        self.trainer: DQTrainer = DQTrainer(hyperparams)
+        self.train_times: int = hyperparams.train_times
 
         self.previous_state: torch.Tensor = None
 
-    def _exploration_rate(self) -> float:
-        """Returns the exploration rate at this point in the training process"""
-        return max(self._exploration_rate_curr, self._exploration_rate_end)
 
     def get_move(self, state: np.ndarray, valid_moves: np.ndarray) -> int:
-        if self.testing:
-            prediction = self._predict(state, valid_moves)
-            return prediction
-
-        
-        if rn.random() < self._exploration_rate():
-            #TODO Random sampling that can go into a wall, but not tail, at least to start with
-            #TODO and then later not in a wall either.
-            return self._get_random(valid_moves)
 
         return self._predict(state, valid_moves)
 
@@ -47,10 +30,9 @@ class DQAgent:
 
         self.previous_state = state if not done else None
 
-    def game_is_done(self):
+    def train(self):
         """Call this after an episode is finished."""
-        self._exploration_rate_curr -= self.epsilon
-        for i in range(self.hyperparams.train_times):
+        for _ in range(self.train_times):
             idxs, error = self.trainer.train(self.bank)
             self.bank.update_priorities(idxs, error)
 

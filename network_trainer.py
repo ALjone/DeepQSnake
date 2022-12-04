@@ -7,30 +7,32 @@ import numpy as np
 
 class DQTrainer:
     def __init__(self, hyperparams: Hyperparams) -> None:
-        self.model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space)
-
-        if hyperparams.load_path is not None:
+        self.model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space, hyperparams.noise)
+        
+        #https://discuss.pytorch.org/t/how-to-load-part-of-pre-trained-model/1113/2
+        if hyperparams.load_path is not None:   
             weights = torch.load(hyperparams.load_path)
             try:
                 self.model.load_state_dict(weights.state_dict())
                 print("Successfully loaded model")
             except:
+                own_state = self.model.state_dict()
                 for name, param in weights.state_dict().items():
                     if "conv" not in name:
                         continue
-                    self.model[name].copy_(param)
+                    own_state[name].copy_(param)
                 print("Successfully loaded conv layers")
             
 
         #Try high
         self.gamma: float = hyperparams.gamma
-        self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=hyperparams.lr, weight_decay=0.001)
+        self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=hyperparams.lr, weight_decay=hyperparams.reg)
 
         self.device = hyperparams.device
 
         self.action_space = hyperparams.action_space
 
-        self.target_model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space)
+        self.target_model: SnakeBrain = SnakeBrain(hyperparams.game.mapsize, hyperparams.action_space, hyperparams.noise)
         self.target_model.load_state_dict(self.model.state_dict())
 
         self.model.to(self.device)
@@ -58,8 +60,9 @@ class DQTrainer:
             features = features.to(self.device)
             self.model.eval()
             pred = self.model(features)
-            return self.rand_argmax(pred)
-            #TODO this is not action masked
+            if not self.hyperparams.action_masking:
+                return self.rand_argmax(pred)
+            #NOTE this is action masked unless the line above is uncommented
             #https://discuss.pytorch.org/t/masked-argmax-in-pytorch/105341
             large = torch.finfo (pred.dtype).max
             return self.rand_argmax((pred - large * (1 - valid_moves) - large * (1 - valid_moves)))
@@ -73,13 +76,13 @@ class DQTrainer:
             tp.data.copy_((1 - self.tau) * tp.data + self.tau * sp.data)
     
     def train(self, bank: PrioritizedReplayBuffer) -> None:
-        if len(bank) < self.batch_size:
+        if len(bank) < self.hyperparams.wait_frames:
             return [], []
 
         self.model.train()
         self.soft_update()
 
-        samples = bank.sample(self.batch_size)
+        samples = bank.sample(min(len(bank), self.batch_size))
         return self._train_batch(samples)
 
 
@@ -90,8 +93,8 @@ class DQTrainer:
 
         state, action, reward, next_state, done = batch
 
-
-        Q_next = self.target_model(next_state).max(dim=1).values
+        with torch.no_grad():
+            Q_next = self.target_model(next_state).max(dim=1).values
         Q_target = reward + self.gamma * (1 - done) * Q_next
         Q = self.model(state)[torch.arange(len(action)), action.to(torch.long).flatten()]
 
@@ -99,7 +102,8 @@ class DQTrainer:
         loss = torch.mean((Q - Q_target)**2 * weights)
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
+        if self.clip is not None:
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
         self.optim.step()
 
         return tree_idxs, td_error

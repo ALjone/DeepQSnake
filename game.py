@@ -97,7 +97,7 @@ class Game:
             self.final_state = True
             self.death_penalty = 10
 
-        return self.dead + self.final_state
+        return self.dead or self.final_state
 
     def do_action(self, action) -> Tuple[np.ndarray, float, bool]:
         """Completes the given action and returns the new map"""
@@ -115,8 +115,7 @@ class Game:
             #North?
             self.__move(0, 1)
 
-        is_game_over = self.__is_game_over()
-        return self._get_map(), self.__get_reward(), is_game_over
+        return self._get_map(), self.__get_reward(), self.__is_game_over()
 
     def __contains_apple(self, x_pos, y_pos):
         return (x_pos == self.apple_x and y_pos == self.apple_y)
