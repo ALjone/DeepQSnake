@@ -1,9 +1,9 @@
 To do:
 
-Attempt distributed agents
-Rewrite game to C/C++/Java/Rust/Whatever
-Do more research on loss function for dueling heads, and general network architecture
+Improve distributed agents
 Research better exploring method than epsilon-greedy (Preferably one that simply gets better the longer you train without human intereference)
-Make a custom noisy layer for noisy-nets
 Make website that visualizes the best model
-Frame stacking is necessary 
+
+FP16!!!!!
+Parallel environments, but only 1 agent, that makes moves in batches (Perhaps 100 games per core?)
+RND https://arxiv.org/pdf/1810.12894.pdf

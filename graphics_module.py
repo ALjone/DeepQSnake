@@ -1,5 +1,5 @@
 import torch
-from game import Game
+from game import snake_env
 import numpy as np
 from tkinter import *
 
@@ -26,9 +26,8 @@ class Graphics:
         #self.root.mainloop()
 
 
-    def updateWin(self, game: Game, reward, expected):
-        self.root.title(f"Total reward: {reward}, Moves: {game.moves}, Hunger: {game.moves_since_ate}, Expected: {expected}")
-        game_map = torch.ceil(game._get_map())
+    def updateWin(self, game_map: snake_env, reward):
+        self.root.title(f"Total reward: {reward}")
         for x in range(self.size):
                 for y in range(self.size):
                     color = self.canvas.itemcget(self.rects[(y, x)], "fill")

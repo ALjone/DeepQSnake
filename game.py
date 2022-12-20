@@ -1,23 +1,18 @@
 import torch
-import random as rn
 from typing import Tuple
 import numpy as np
-from game_map import Game_map
-from collections import deque
 
-reverse = {0: 1, 1: 0, 2: 3, 3: 2}
-
-class Game:
-    def __init__(self, size, lifespan, apple_reward, death_reward, device):
+class snake_env:
+    def __init__(self, size, _, lifespan):
         """Initializes the game with the correct size and lifespan, and puts a head in the middle, as well as an apple randomly on the map"""
         self.mapsize: int = size
         self.size: int = size**2
         self.lifespan: int = lifespan
         self.__game_map: Game_map = Game_map(self.mapsize)
-        self.apple_reward = apple_reward
-        self.death_reward = death_reward
+        self.apple_reward = 1
+        self.death_reward = -1
         self.death_penalty = 0
-        self.device = device
+        self.device = "cpu"
         self.reset()    
     
     def _addApple(self):
@@ -99,7 +94,7 @@ class Game:
 
         return self.dead or self.final_state
 
-    def do_action(self, action) -> Tuple[np.ndarray, float, bool]:
+    def step(self, action) -> Tuple[np.ndarray, float, bool]:
         """Completes the given action and returns the new map"""
         self.ate_last_turn = False
         if(action == 0):
@@ -176,3 +171,44 @@ class Game:
 
     def _get_map(self):
         return self.__game_map.get_map().to(self.device)
+
+
+
+class Game_map:
+    def __init__(self, mapsize) -> None:
+        self.mapsize = mapsize
+
+        self.reset()
+
+    def has_tail(self, x, y):
+        return self.game_map[1, x, y] > 0
+    
+    def update(self, snake, apples):
+        """Resets and updates the position of all the objectives on the map"""
+        #Reset map
+        self.reset()
+
+        #Add head
+
+        self.game_map[0, snake[0, 0], snake[0, 1]] = 1
+        self.possible_apple_pos_map[snake[0, 0], snake[0, 1]] = 1
+
+        #Add tail
+        for i, tail in enumerate(reversed(snake[1:])):
+            self.game_map[1, tail[0], tail[1]] = 1
+            self.possible_apple_pos_map[tail[0], tail[1]] = 1
+
+        #Add apple
+
+        #Fix this
+        for apple_x, apple_y in apples:
+            if apple_x is None or apple_y is None:
+                continue
+            self.game_map[2, apple_x, apple_y] = 1
+
+    def get_map(self):
+        return self.game_map
+
+    def reset(self):
+        self.game_map = torch.zeros((3, self.mapsize, self.mapsize), dtype = torch.float16)
+        self.possible_apple_pos_map = torch.zeros((self.mapsize, self.mapsize), dtype = torch.int)
