@@ -3,16 +3,16 @@ from typing import Tuple
 import numpy as np
 
 class snake_env:
-    def __init__(self, size, _, lifespan, device = "cuda"):
+    def __init__(self, size, _, lifespan):
         """Initializes the game with the correct size and lifespan, and puts a head in the middle, as well as an apple randomly on the map"""
         self.mapsize: int = size
         self.size: int = size**2
         self.lifespan: int = lifespan
-        self.__game_map: Game_map = Game_map(self.mapsize, torch.device("cpu"))
+        self.__game_map: Game_map = Game_map(self.mapsize)
         self.apple_reward = 1
         self.death_reward = -1
         self.death_penalty = 0
-        self.device = torch.device("cpu")
+        self.device = "cpu"
         self.reset()    
     
     def _addApple(self):
@@ -71,7 +71,7 @@ class snake_env:
         for i, move in enumerate([(-1, 0), (1, 0), (0, -1), (0, 1)]):
             is_valid = int(self.__can_move(x+move[0], y+move[1]))
             valid[i] = is_valid
-        return valid.to(self.device)
+        return valid#.to(self.device)
         
     def __is_game_over(self):
         """Check if either the snake is out of bounds, hasn't eaten enough, or ate itself."""
@@ -93,6 +93,9 @@ class snake_env:
             self.death_penalty = 10
 
         return self.dead or self.final_state
+
+    def get_state(self):
+        return self.__game_map.game_map
 
     def step(self, action) -> Tuple[np.ndarray, float, bool]:
         """Completes the given action and returns the new map"""
@@ -195,7 +198,7 @@ class snake_env:
             rows.append("|" + " ".join(row) + "|")
 
         # Add top and bottom borders to the game board
-        border = "+" + "-" * (self.game_map.shape[2]*2-1) + "+"
+        border = "+" + "-" * (self.__game_map.game_map.shape[2]*2-1) + "+"
         rows.insert(0, border)
         rows.append(border)
 
@@ -205,9 +208,9 @@ class snake_env:
 
 
 class Game_map:
-    def __init__(self, mapsize, device) -> None:
+    def __init__(self, mapsize) -> None:
         self.mapsize = mapsize
-        self.device = device
+
         self.reset()
 
     def has_tail(self, x, y):
@@ -240,5 +243,5 @@ class Game_map:
         return self.game_map
 
     def reset(self):
-        self.game_map = torch.zeros((3, self.mapsize, self.mapsize), dtype = torch.float16).to(self.device)
+        self.game_map = torch.zeros((3, self.mapsize, self.mapsize), dtype = torch.float16)
         self.possible_apple_pos_map = torch.zeros((self.mapsize, self.mapsize), dtype = torch.int)

@@ -4,7 +4,8 @@ from hyperparams import Hyperparams
 import time
 import torch
 from collections import deque
-from snake import SnakeGame as snake_env
+from game import snake_env
+#from snake import SnakeGame as snake_env
 reverse = {0: 1, 1: 0, 2: 3, 3: 2}
 
 
@@ -62,7 +63,7 @@ class Visualizer:
             time.sleep(0.05)
             self.graphics.updateWin(state, total_reward)
             state = torch.cat(tuple(queue))
-            move = self.agent.get_move(state, self.game.valid_moves())
+            move = self.agent.get_move(state, self.game.valid_moves()).item()
             #print(move)
             state, reward, done = self.game.step(move)
             queue.append(torch.tensor(state))

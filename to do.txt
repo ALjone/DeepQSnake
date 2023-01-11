@@ -7,3 +7,5 @@ Make website that visualizes the best model
 FP16!!!!!
 Parallel environments, but only 1 agent, that makes moves in batches (Perhaps 100 games per core?)
 RND https://arxiv.org/pdf/1810.12894.pdf
+Massively increase number of filters: file:///C:/Users/Audun/Downloads/81811-joao-crespo_dissertacao.pdf
+Try to put simple_network on GPU?

@@ -8,56 +8,24 @@ class SnakeBrain(torch.nn.Module):
 
         #Part 1
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3*frame_stack, 16, 2, padding = (1, 1)),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(3*frame_stack, 256, 2, padding = (2, 2)),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.Conv2d(16, 32, 2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(256, 256, 2),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.Conv2d(32, 32, 2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(256, 256, 2),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.Conv2d(32, 32, 2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(256, 256, 2),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.Conv2d(32, 16, 2),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(256, 64, 2),
+            nn.BatchNorm2d(64),
             nn.ReLU()
         )
 
-        #Part 2
-        self.conv2 = nn.Sequential(
-        nn.Conv2d(3*frame_stack, 16, 3, padding = (2, 2)),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-            nn.Conv2d(16, 32, 3),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Conv2d(32, 32, 3),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Conv2d(32, 16, 2),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-        )
-
-        #Part 3
-        self.conv3 = nn.Sequential(
-        nn.Conv2d(3*frame_stack, 16, 4, padding = (3, 3)),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-            nn.Conv2d(16, 32, 4),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Conv2d(32, 32, 3),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Conv2d(32, 16, 2),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-        )
-
-        conv_output = ((input_size-3)**2)*16*3
+        conv_output = 2304#((input_size-3)**2)*16*5
 
         #Value of state
         self.V = nn.Sequential(
@@ -93,7 +61,7 @@ class SnakeBrain(torch.nn.Module):
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
         x = x.float()
-        x = torch.concat((torch.flatten(self.conv1(x), 1), torch.flatten(self.conv2(x), 1), torch.flatten(self.conv3(x), 1)), axis = 1)
+        x = torch.flatten(self.conv1(x), 1)
         A = self.A(x)
         V = self.V(x)
         if return_separate:

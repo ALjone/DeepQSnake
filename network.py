@@ -2,13 +2,13 @@ from typing import List
 from prioritized_replay_memory import PrioritizedReplayBuffer
 import torch
 from hyperparams import Hyperparams
-from model import SnakeBrain
+from new_model import SnakeBrain
 #from experimental_model import SnakeBrain
 import numpy as np
 
 class DQTrainer:
     def __init__(self, hyperparams: Hyperparams) -> None:
-        self.model: SnakeBrain = SnakeBrain(hyperparams.size, hyperparams.action_space, hyperparams.noise, hyperparams.frame_stack, hyperparams.device)
+        self.model: SnakeBrain = SnakeBrain(hyperparams.size, hyperparams.action_space, hyperparams.frame_stack)
         #TODO FP16!!
         
         #https://discuss.pytorch.org/t/how-to-load-part-of-pre-trained-model/1113/2
@@ -34,7 +34,7 @@ class DQTrainer:
 
         self.action_space = hyperparams.action_space
 
-        self.target_model: SnakeBrain = SnakeBrain(hyperparams.size, hyperparams.action_space, hyperparams.noise, hyperparams.frame_stack, hyperparams.device)
+        self.target_model: SnakeBrain = SnakeBrain(hyperparams.size, hyperparams.action_space, hyperparams.frame_stack)
         self.target_model.load_state_dict(self.model.state_dict())
 
         self.model.to(self.device)
@@ -49,7 +49,8 @@ class DQTrainer:
 
     def __rand_argmax(self, tens):
         argmaxes = torch.where(tens == tens.max())[1]
-        return np.random.choice(argmaxes.cpu())
+        idx = np.random.randint(0, argmaxes.shape[0])
+        return argmaxes[idx]#np.random.choice(argmaxes.to(self.device))
 
     def reload_model(self):
         if self.hyperparams.load_path is not None:
@@ -72,9 +73,9 @@ class DQTrainer:
             return self.__rand_argmax((pred - large * (1 - valid_moves) - large * (1 - valid_moves)))
 
     def random(self, valid_moves: torch.Tensor):
-        valid_moves = valid_moves.to(self.device)
         max_inds, = torch.where(valid_moves == valid_moves.max())
-        return np.random.choice(max_inds).item()
+        idx = np.random.randint(0, max_inds.shape[0])
+        return max_inds[idx]#np.random.choice(max_inds).item()
 
     def soft_update(self):
         for tp, sp in zip(self.target_model.parameters(), self.model.parameters()):

@@ -1,8 +1,8 @@
 from multiprocessing import Pool
 from agent import DQAgent
 import torch
-#from game import snake_env
-from snake import SnakeGame as snake_env
+from game import snake_env
+#from snake import SnakeGame as snake_env
 from simple_network import simple_network
 from datetime import datetime
 import numpy as np
@@ -13,9 +13,9 @@ from tqdm import tqdm
 from collections import deque
 from torch.utils.tensorboard import SummaryWriter
 
-def play_episodes(episodes_to_play, model: simple_network, hyperparams: Hyperparams):
+def play_episodes(episodes_to_play, model: simple_network, hyperparams: Hyperparams, env: snake_env):
     memories = []
-    env = snake_env(hyperparams.size, hyperparams.size, hyperparams.lifespan)
+    #env = snake_env(hyperparams.size, hyperparams.size, hyperparams.lifespan)
     reward = 0
     for _ in range(episodes_to_play):
         queue = deque([], maxlen=hyperparams.frame_stack)
@@ -24,33 +24,31 @@ def play_episodes(episodes_to_play, model: simple_network, hyperparams: Hyperpar
             queue.append(next_state)
         done = False
         while(not done):
-            state = np.concatenate(tuple(queue), 0)
-            #TODO Check if one of this concats can be removed
+            state = torch.concatenate(tuple(queue), 0)
             action = model.predict(state, env.valid_moves())
             next_state, reward, done = env.step(action)
             queue.append(next_state)
-            memories.append((action, state, np.concatenate(tuple(queue), 0), reward, done))
+            memories.append((action, state, torch.concatenate(tuple(queue), 0), reward, done))
     return memories
 
 class Trainer:
     def __init__(self, hyperparams: Hyperparams) -> None:
         # params
         self.max_episodes: int = hyperparams.max_episodes
-        self.game: snake_env = snake_env(hyperparams.size, hyperparams.size, hyperparams.lifespan)
+        self.game: snake_env = snake_env(hyperparams.size, hyperparams.size, hyperparams.lifespan, hyperparams.device)
 
         self.agent: DQAgent = DQAgent(hyperparams)
         
-        self.update_rate: int = hyperparams.batch_times
+        self.update_rate: int = 1#hyperparams.batch_times
         self.test_games: int = hyperparams.test_games
 
         self.hyperparams = hyperparams
 
         self.writer = SummaryWriter()
 
-    def update_writer(self, games_per_second, actions_per_second, episodes, noise_level):
+    def update_writer(self, games_per_second, actions_per_second, episodes):
         self.writer.add_scalar("Other/Games per second", games_per_second, episodes//self.update_rate)
         self.writer.add_scalar("Other/Actions per second", actions_per_second, episodes//self.update_rate)
-        self.writer.add_scalar("Other/Noise level", noise_level, episodes//self.update_rate)
 
 
     def test(self, episodes):
@@ -74,14 +72,14 @@ class Trainer:
                 queue.append(state)
             done = False
             while(not done):
-                state = np.concatenate(queue)
+                state = torch.concatenate(tuple(queue), 0)
                 move = self.agent.get_move(state, self.game.valid_moves())
                 actions[move] += 1
                 state, reward, done = self.game.step(move)
-                queue.append(torch.tensor(state))
+                queue.append(torch.tensor(state) if type(state) == np.ndarray else state)
                 moves += 1
                 if i == self.test_games-1: #Only do this for last game
-                    state = np.concatenate(queue)
+                    state = torch.concatenate(tuple(queue), 0)
                     state = torch.tensor(state) if type(state) == np.ndarray else state
                     _, value, action_values = self.agent.trainer.model(state.to(self.agent.trainer.device), return_separate = True)
                     V.append(value.item())
@@ -149,13 +147,12 @@ class Trainer:
         print(f"Benchmark: \n\tAverage apples: {round(score/sims, 2)}\n\tAverage moves: {int(moves/sims)} moves\n\tMax apples: {max_score}\n\tGames without apples: {round((num_bad/sims)*100, 2)}%\n\tPlayed {round(sims/(time.time()-start_time), 2)} g/s\n\tAction distribution: {actions}")
         self.agent.testing = False
 
-    def add_results_to_agent(self):
-        pass
-
     def formate_time(self, seconds):
         #https://stackoverflow.com/a/775075
         m, s = divmod(seconds, 60)
         h, m = divmod(m, 60)
+        if m == 0:
+            return f'{int(s)} seconds' 
         if h == 0: 
             return f'{int(m)} minutes and {int(s)} seconds' 
         else:
@@ -165,6 +162,26 @@ class Trainer:
         torch.save(self.agent.trainer.model, "checkpoints/last") #For easily getting it
         torch.save(self.agent.trainer.model, 'models/model_'+ datetime.now().strftime("%m_%d_%Y%H_%M_%S"))
 
+    def experience(self, models, hyperparams, envs, num_per_core):
+        memories = 0
+        exp_time = time.time()
+        for model in models:
+            model.reload_model(self.agent.trainer.model.state_dict())
+        with Pool(processes=self.hyperparams.workers) as pool:
+            multiple_results = [pool.apply_async(play_episodes, (n, m, h, e)) for n, m, h, e in zip(num_per_core, models, hyperparams, envs)]
+            results = [res.get() for res in multiple_results]
+
+        for res in results:
+            memories += len(res)
+            self.agent.make_memory(res)
+
+        return memories, time.time()-exp_time
+
+    def train(self, memories):
+        train_time = time.time()
+        self.agent.train((memories//self.hyperparams.batch_size)*self.hyperparams.train_per_memory)
+        return time.time()-train_time
+
     def run(self, benchmark = False):
         start_time = time.time() 
         print(f"GPU available: {torch.cuda.is_available()}")
@@ -173,48 +190,46 @@ class Trainer:
         episodes = 0
         prev_time = start_time
         
-        #Main loop
+        #Initialize distribution
         num_per_core = [self.hyperparams.game_batch_size for _ in range(self.hyperparams.workers)]
         hyperparams = [self.hyperparams for _ in range(self.hyperparams.workers)]
+        models = [simple_network(self.hyperparams.size, self.hyperparams.action_space, self.hyperparams.action_masking, self.hyperparams.frame_stack, self.agent.trainer.model.state_dict(), self.hyperparams.device) for _ in range(self.hyperparams.workers)]
+        envs = [snake_env(self.hyperparams.size, self.hyperparams.size, self.hyperparams.lifespan, self.hyperparams.device) for _ in range(self.hyperparams.workers)]
 
-        models = [simple_network(self.hyperparams.size, self.hyperparams.action_space, self.hyperparams.noise, self.hyperparams.action_masking, self.hyperparams.frame_stack, self.agent.trainer.model.state_dict()) for _ in range(self.hyperparams.workers)]
+
         total_memories = 0
+        #Main loop
         while (episodes < self.max_episodes):
-            memories = 0
-            for _ in range(self.hyperparams.batch_times):
-                for model in models:
-                    model.reload_model(self.agent.trainer.model.state_dict())
-                with Pool(processes=self.hyperparams.workers) as pool:
-                    multiple_results = [pool.apply_async(play_episodes, (n, m, h)) for n, m, h in zip(num_per_core, models, hyperparams)]
-                    results = [res.get() for res in multiple_results]
+            memories, exp_time = self.experience(models, hyperparams, envs, num_per_core)
 
-                for res in results:
-                    memories += len(res)
-                    self.agent.make_memory(res)
+            train_time = self.train(memories)
 
-                    self.agent.train((max(len(res)//self.hyperparams.batch_size, self.hyperparams.batch_size))*self.hyperparams.train_per_memory)
             total_memories += memories
-            torch.save(self.agent.trainer.model, "checkpoints/last_checkpoint_in_case_of_crash")
-            eps = sum(num_per_core)*self.hyperparams.batch_times
-            episodes += eps
-            time_left = (time.time()-prev_time)*((self.max_episodes-episodes)/(self.hyperparams.batch_times))
-            print(f"\nAt {round(episodes/1000, 1)}k/{round(self.max_episodes/1000, 1)}k games played. Noise level for exploration: {round(self.agent.trainer.model.get_noise_level(), 4)}. ETA: {self.formate_time(int(time_left))}.",
-            f"Playing {round(eps/(time.time()-prev_time), 2)} g/s and doing {round(memories/(time.time()-prev_time), 2)} a/s. Trained on {int(self.agent.trained_times/1000)}k samples so far, done {int(total_memories/1000)}k actions")
 
+            torch.save(self.agent.trainer.model, "checkpoints/last_checkpoint_in_case_of_crash")
+
+            eps = sum(num_per_core)
+            episodes += eps
+
+            time_left = (time.time()-prev_time)*(self.max_episodes-episodes)
+            print(f"\nAt {round(episodes/1000, 1)}k games played.", #/{round(self.max_episodes/1000, 1)}k games played.",# ETA: {self.formate_time(int(time_left))}.",
+            f"Playing {round(eps/(time.time()-prev_time), 2)} g/s and doing {round(memories/(time.time()-prev_time), 2)} a/s. Spent {self.formate_time(exp_time)} experiencing and {self.formate_time(train_time)} training.", 
+            f"Trained on {int(self.agent.trained_times/1000)}k samples so far, done {int(total_memories/1000)}k actions")
+
+            self.update_writer(games_per_second=eps/(time.time()-prev_time), actions_per_second=memories/(time.time()-prev_time), episodes=episodes)
             self.test(episodes)
-            self.update_writer(games_per_second=eps/(time.time()-prev_time), actions_per_second=memories/(time.time()-prev_time), episodes=episodes, noise_level = self.agent.trainer.model.get_noise_level())
             prev_time = time.time() 
+
         self.save()
 
         print(f"Finished training. Took {self.formate_time(int(time.time()-start_time))}.")
-        print("Expected value at start:", torch.round(self.agent.trainer.model(torch.tensor(self.game.reset())), decimals = 2))
 
 
 
 if __name__ == "__main__":
-
     hyperparams = Hyperparams() 
-    #hyperparams.set_load_path("checkpoints\\last_checkpoint_in_case_of_crash")
+    hyperparams.set_load_path("checkpoints\\last_checkpoint_in_case_of_crash")
+    #hyperparams.set_load_path("checkpoints\\very_good_7x7")
 
     trainer = Trainer(hyperparams = hyperparams)
     trainer.run(False)

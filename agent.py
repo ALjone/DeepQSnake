@@ -29,7 +29,7 @@ class DQAgent:
     def _make_memory(self, action: int, state: np.ndarray, next_state: np.ndarray, reward: float, done: bool) -> None:
         state = torch.tensor(state) if type(state) == np.ndarray else state
         next_state = torch.tensor(next_state) if type(next_state) == np.ndarray else next_state
-        self.bank.add((state, torch.tensor(action), torch.tensor(reward), next_state if not done else torch.zeros(next_state.shape), int(done)))
+        self.bank.add((state, action, reward, next_state if not done else torch.zeros(next_state.shape), int(done)))
 
     def train(self, train_times):
         """Call this after an episode is finished."""

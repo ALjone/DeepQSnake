@@ -4,19 +4,18 @@ import torch
 class Hyperparams:
     def __init__(self) -> None:
         
-        self.device: torch.DeviceObjType = torch.device("cuda")
+        self.device: torch.DeviceObjType = torch.device("cuda:0")
         
         #trainer
         self.gamma: float = 0.99 #TRY HIGH AT SOME POINT
         self.lr: float = 0.0002 #0.0000625 Recommended from https://arxiv.org/pdf/1710.02298.pdf
         self.reg: float = 1e-4
-        self.batch_size: int = 128
+        self.batch_size: int = 1024
         self.clip: int = 10 # 10 was suggested in Dueling heads paper
         self.tau = 0.001#0.0005
         self.wait_frames = 1000 #Wait at least this many frames before starting, according to https://arxiv.org/pdf/1710.02298.pdf
-        self.noise = 0.5 #Noise for the noisy nets exploration
         self.load_path: str = None
-        self.frame_stack = 2
+        self.frame_stack = 4
 
 
         #replay
@@ -27,13 +26,11 @@ class Hyperparams:
         self.max_episodes: int = 5000000
         self.replay_size: int = 100000
         self.workers = 4
-        self.batch_times: int = 1
         #How many games per core to train
-        self.game_batch_size: int = 100
-        self.test_games: int = max(self.batch_size//10, 1)
-        self.model_save_rate: int = max(self.batch_times//10, 1)
+        self.game_batch_size: int = 500
+        self.test_games: int = max((self.game_batch_size)*self.workers//10, 1)
         #Important, as we need to train _at least_ once per move we make, otherwise priorization is dumb
-        self.train_per_memory: int = 3
+        self.train_per_memory: int = 10
 
         #game
         self.size: int = 7
