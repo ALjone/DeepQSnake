@@ -25,7 +25,7 @@ class Hyperparams:
         #main
         self.max_episodes: int = 5000000
         self.replay_size: int = 100000
-        self.workers = 4
+        self.workers = 16
         #How many games per core to train
         self.game_batch_size: int = 500
         self.test_games: int = max((self.game_batch_size)*self.workers//10, 1)

@@ -177,12 +177,12 @@ class Trainer:
 
         return memories, time.time()-exp_time
 
-    def train(self, memories):
+    def _train(self, memories):
         train_time = time.time()
         self.agent.train((memories//self.hyperparams.batch_size)*self.hyperparams.train_per_memory)
         return time.time()-train_time
 
-    def run(self, benchmark = False):
+    def train(self, benchmark = False):
         start_time = time.time() 
         print(f"GPU available: {torch.cuda.is_available()}")
         if benchmark:
@@ -202,7 +202,7 @@ class Trainer:
         while (episodes < self.max_episodes):
             memories, exp_time = self.experience(models, hyperparams, envs, num_per_core)
 
-            train_time = self.train(memories)
+            train_time = self._train(memories)
 
             total_memories += memories
 
@@ -232,4 +232,4 @@ if __name__ == "__main__":
     #hyperparams.set_load_path("checkpoints\\very_good_7x7")
 
     trainer = Trainer(hyperparams = hyperparams)
-    trainer.run(False)
+    trainer.train(False)
