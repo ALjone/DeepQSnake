@@ -2,7 +2,8 @@ from typing import List
 from prioritized_replay_memory import PrioritizedReplayBuffer
 import torch
 from hyperparams import Hyperparams
-from new_model import SnakeBrain
+#TODO Could use new_model for bigger
+from model import SnakeBrain
 #from experimental_model import SnakeBrain
 import numpy as np
 
@@ -47,8 +48,14 @@ class DQTrainer:
 
         self.hyperparams = hyperparams
 
+    def __rand_argmax_batch(self, tens):
+        actions = torch.zeros(tens.shape[0])
+        for i, tensor in enumerate(tens):
+            actions[i] = self.__rand_argmax(tensor)
+        return actions
+
     def __rand_argmax(self, tens):
-        argmaxes = torch.where(tens == tens.max())[1]
+        argmaxes = torch.where(tens == tens.max())[0]
         idx = np.random.randint(0, argmaxes.shape[0])
         return argmaxes[idx]#np.random.choice(argmaxes.to(self.device))
 
@@ -60,12 +67,16 @@ class DQTrainer:
 
 
     def predict(self, features: torch.Tensor, valid_moves: torch.Tensor):
+        if len(features.shape) == 4:
+            features = features.flatten(0, 1)
+        else:
+            features = features.flatten(1, 2)
         with torch.no_grad():
             features = features.to(self.device)
             self.model.eval()
             pred = self.model(features)
             if not self.hyperparams.action_masking:
-                return self.__rand_argmax(pred)
+                return self.__rand_argmax_batch(pred)
             #NOTE this is action masked unless the line above is uncommented
             #https://discuss.pytorch.org/t/masked-argmax-in-pytorch/105341
             valid_moves = valid_moves.to(self.device)

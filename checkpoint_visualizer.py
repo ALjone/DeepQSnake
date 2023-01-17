@@ -1,10 +1,10 @@
-from game import snake_env
+from env import snake_env
 from agent import DQAgent
 from hyperparams import Hyperparams
 import time
 import torch
 from collections import deque
-from game import snake_env
+from env import snake_env
 #from snake import SnakeGame as snake_env
 reverse = {0: 1, 1: 0, 2: 3, 3: 2}
 

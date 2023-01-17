@@ -65,32 +65,37 @@ class PrioritizedReplayBuffer:
         self.max_priority = eps  # priority for new samples, init as eps
 
         # transition: state, action, reward, next_state, done
-        self.state = torch.empty((buffer_size, *state_size), dtype=torch.float)
-        self.action = torch.empty(buffer_size, action_size, dtype=torch.float)
-        self.reward = torch.empty(buffer_size, dtype=torch.float)
-        self.next_state = torch.empty((buffer_size, *state_size), dtype=torch.float)
-        self.done = torch.empty(buffer_size, dtype=torch.int)
+        self.state = torch.empty((buffer_size, *state_size), dtype=torch.float).to(self.device)
+        self.action = torch.empty(buffer_size, action_size, dtype=torch.float).to(self.device)
+        self.reward = torch.empty(buffer_size, dtype=torch.float).to(self.device)
+        self.next_state = torch.empty((buffer_size, *state_size), dtype=torch.float).to(self.device)
+        self.done = torch.empty(buffer_size, dtype=torch.int).to(self.device)
 
         self.count = 0
         self.real_size = 0
         self.size = buffer_size
 
-    def add(self, transition):
+    def add(self, transition, num = 1):
         state, action, reward, next_state, done = transition
 
+        num = min(num, self.size-self.count)
+
         # store transition index with maximum priority in sum tree
-        self.tree.add(self.max_priority, self.count)
+        for i in range(num):
+            self.tree.add(self.max_priority, self.count+i)
 
         # store transition in the buffer
-        self.state[self.count] = torch.as_tensor(state)
-        self.action[self.count] = torch.as_tensor(action)
-        self.reward[self.count] = torch.as_tensor(reward)
-        self.next_state[self.count] = torch.as_tensor(next_state)
-        self.done[self.count] = torch.as_tensor(done)
+        self.state[self.count:self.count+num] = torch.as_tensor(state)[:num].to(self.device)
+        self.action[self.count:self.count+num] = torch.as_tensor(action)[:num].to(self.device)
+        self.reward[self.count:self.count+num] = torch.as_tensor(reward)[:num].to(self.device)
+        self.next_state[self.count:self.count+num] = torch.as_tensor(next_state)[:num].to(self.device)
+        self.done[self.count:self.count+num] = torch.as_tensor(done)[:num].to(self.device)
 
         # update counters
-        self.count = (self.count + 1) % self.size
-        self.real_size = min(self.size, self.real_size + 1)
+        self.count = (self.count + num) % self.size
+        if self.real_size + num > self.size:
+            print("Overflowed")
+        self.real_size = min(self.size, self.real_size + num)
 
     def sample(self, batch_size):
         assert self.real_size >= batch_size, "buffer contains less samples than batch size"

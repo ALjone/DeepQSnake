@@ -23,14 +23,15 @@ class Hyperparams:
         self.alpha = 0.5
         
         #main
-        self.max_episodes: int = 5000000
-        self.replay_size: int = 100000
-        self.workers = 16
+        self.frames: int = 200_000_000
+        self.replay_size: int = 1000000
+        #Number of cores to use
+        self.workers = 24
         #How many games per core to train
-        self.game_batch_size: int = 500
-        self.test_games: int = max((self.game_batch_size)*self.workers//10, 1)
+        self.frames_per_iteration_per_game: int = 100000
+        self.test_games: int = 400#max((self.game_batch_size)*self.workers//10, 1)
         #Important, as we need to train _at least_ once per move we make, otherwise priorization is dumb
-        self.train_per_memory: int = 10
+        self.train_per_memory: int = 3
 
         #game
         self.size: int = 7

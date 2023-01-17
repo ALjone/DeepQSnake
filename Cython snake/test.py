@@ -2,7 +2,7 @@ import curses
 import numpy as np
 
 import snake  # This is the Cython module you created
-from game import snake_env
+from env import snake_env
 def main():
     # Initialize the game
     game = snake_env(10, 10, 100)

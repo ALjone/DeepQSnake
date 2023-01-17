@@ -1,5 +1,5 @@
 import torch
-from game import snake_env
+from env import snake_env
 import numpy as np
 from tkinter import *
 

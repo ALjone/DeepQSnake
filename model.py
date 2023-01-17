@@ -11,17 +11,17 @@ class SnakeBrain(torch.nn.Module):
             nn.Conv2d(3*frame_stack, 16, 2, padding = (1, 1)),
             nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.Conv2d(16, 32, 2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(16, 128, 2),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.Conv2d(32, 32, 2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(128, 128, 2),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.Conv2d(32, 32, 2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(128, 128, 2),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.Conv2d(32, 16, 2),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(128, 128, 2),
+            nn.BatchNorm2d(128),
             nn.ReLU()
         )
 
@@ -30,14 +30,14 @@ class SnakeBrain(torch.nn.Module):
         nn.Conv2d(3*frame_stack, 16, 3, padding = (2, 2)),
             nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.Conv2d(16, 32, 3),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(16, 128, 3),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.Conv2d(32, 32, 3),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(128, 128, 3),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.Conv2d(32, 16, 2),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(128, 128, 2),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
         )
 
@@ -46,18 +46,18 @@ class SnakeBrain(torch.nn.Module):
         nn.Conv2d(3*frame_stack, 16, 4, padding = (3, 3)),
             nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.Conv2d(16, 32, 4),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(16, 128, 4),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.Conv2d(32, 32, 3),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(128, 128, 3),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.Conv2d(32, 16, 2),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(128, 128, 2),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
         )
 
-        conv_output = ((input_size-3)**2)*16*3
+        conv_output = ((input_size-3)**2)*128*3
 
         #Value of state
         self.V = nn.Sequential(

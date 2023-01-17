@@ -1,9 +1,11 @@
 import torch
 from typing import Tuple
 import numpy as np
+import gym
+from gym import spaces
 
-class snake_env:
-    def __init__(self, size, _, lifespan, device = "cuda"):
+class snake_env(gym.Env):
+    def __init__(self, size: 10, lifespan: 100, device = "cuda"):
         """Initializes the game with the correct size and lifespan, and puts a head in the middle, as well as an apple randomly on the map"""
         self.mapsize: int = size
         self.size: int = size**2
@@ -13,12 +15,15 @@ class snake_env:
         self.death_reward = -1
         self.death_penalty = 0
         self.device = torch.device("cpu")
+
+        self.observation_space = spaces.Box(0, 1, (3, size, size), dtype=np.uint8)
+        self.action_space = spaces.Discrete(4)
         self.reset()    
     
     def _addApple(self):
         """Adds and apple to the map at a random legal position"""
         #NOTE: Might be sort of a little bit bugged here, given that 
-        true_idx = torch.argwhere(self.__game_map.possible_apple_pos_map == 0)
+        true_idx = np.argwhere(self.__game_map.possible_apple_pos_map == 0)
         random_idx = np.random.randint(len(true_idx), size=1)
         random_index = true_idx[random_idx][0]
         self.apple_x = random_index[0]
@@ -41,7 +46,7 @@ class snake_env:
         self.__game_map.reset()
 
         #Set head and tail
-        self.snake = np.zeros((self.mapsize**2, 2), dtype = np.int8)
+        self.snake = np.zeros((self.mapsize**2, 2), dtype = np.uint8)
         self.snake[0, :] = [self.mapsize//2, self.mapsize//2]    
         self.snake_length = 1
 
@@ -67,11 +72,11 @@ class snake_env:
         #return np.array([1, 1, 1, 1])
         x = self.snake[0, 0]
         y = self.snake[0, 1]
-        valid = torch.zeros(4)
+        valid = np.zeros(4)
         for i, move in enumerate([(-1, 0), (1, 0), (0, -1), (0, 1)]):
             is_valid = int(self.__can_move(x+move[0], y+move[1]))
             valid[i] = is_valid
-        return valid.to(self.device)
+        return valid
         
     def __is_game_over(self):
         """Check if either the snake is out of bounds, hasn't eaten enough, or ate itself."""
@@ -97,6 +102,9 @@ class snake_env:
     def step(self, action) -> Tuple[np.ndarray, float, bool]:
         """Completes the given action and returns the new map"""
         self.ate_last_turn = False
+
+        #if action not in [0, 1, 2, 3]:
+        #    raise ValueError("Action not in [0, 1, 2, 3], but action is:", action)
         if(action == 0):
             #West?
             self.__move(-1, 0)
@@ -110,7 +118,7 @@ class snake_env:
             #North?
             self.__move(0, 1)
 
-        return self._get_map(), self.__get_reward(), self.__is_game_over()
+        return self._get_map(), self.__get_reward(), self.__is_game_over(), {}
 
     def __contains_apple(self, x_pos, y_pos):
         return (x_pos == self.apple_x and y_pos == self.apple_y)
@@ -170,7 +178,7 @@ class snake_env:
 
 
     def _get_map(self):
-        return self.__game_map.get_map().to(self.device)
+        return self.__game_map.get_map()
 
     def __repr__(self):
         # Get the maximum x and y coordinates of the snake's body
@@ -240,5 +248,5 @@ class Game_map:
         return self.game_map
 
     def reset(self):
-        self.game_map = torch.zeros((3, self.mapsize, self.mapsize), dtype = torch.float16).to(self.device)
-        self.possible_apple_pos_map = torch.zeros((self.mapsize, self.mapsize), dtype = torch.int)
+        self.game_map = np.zeros((3, self.mapsize, self.mapsize), dtype = np.uint8)
+        self.possible_apple_pos_map = np.zeros((self.mapsize, self.mapsize), dtype = np.uint8)
